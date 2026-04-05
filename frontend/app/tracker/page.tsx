@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGameState } from "@/src/lib/api";
+import { getGameState, resetGame } from "@/src/lib/api";
 import { socket } from "@/src/lib/socket";
+
 
 export default function TrackerPage() {
   const [state, setState] = useState<any>(null);
@@ -26,15 +27,13 @@ export default function TrackerPage() {
   return (
     <div className="min-h-screen bg-yellow-100 p-6">
       <button
-  onClick={async () => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reset`, {
-  method: "POST",
-});
-  }}
-  className="mt-6 p-3 bg-red-500 text-white rounded"
->
-  Reset Game
-</button>
+        onClick={async () => {
+          await resetGame();
+        }}
+        className="mt-6 p-3 bg-red-500 text-white rounded"
+      >
+        Reset Game
+      </button>
       <h1 className="text-3xl font-bold mb-4">🐣 Egg Tracker</h1>
 
       <p className="mb-4">

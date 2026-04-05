@@ -16,7 +16,7 @@ const char* password = "be7seyjw732ee7ff";
 const char* serverAddress = "https://paastocht-dev4.onrender.com";
 int port = 443;
 
-WiFiClient wifi;
+WiFiSSLClient wifi;
 HttpClient client = HttpClient(wifi, serverAddress, port);
 
 void setup() {

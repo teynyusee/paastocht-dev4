@@ -27,9 +27,9 @@ export default function TrackerPage() {
     <div className="min-h-screen bg-yellow-100 p-6">
       <button
   onClick={async () => {
-    await fetch("http://localhost:5001/api/reset", {
-      method: "POST",
-    });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reset`, {
+  method: "POST",
+});
   }}
   className="mt-6 p-3 bg-red-500 text-white rounded"
 >

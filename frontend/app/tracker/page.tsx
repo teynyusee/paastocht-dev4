@@ -28,7 +28,12 @@ export default function TrackerPage() {
     <div className="min-h-screen bg-yellow-100 p-6">
       <button
         onClick={async () => {
-          await resetGame();
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reset`, {
+            method: "POST",
+          });
+
+          const updatedState = await res.json();
+          setState(updatedState);
         }}
         className="mt-6 p-3 bg-red-500 text-white rounded"
       >

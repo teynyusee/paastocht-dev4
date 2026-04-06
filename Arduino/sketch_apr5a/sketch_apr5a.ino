@@ -13,8 +13,10 @@ const char* ssid = "Proximus-Home-201829_EXT";
 const char* password = "be7seyjw732ee7ff";
 
 // 🌐 BACKEND
-const char* serverAddress = "https://paastocht-dev4.onrender.com";
-int port = 443;
+//const char* serverAddress = "https://paastocht-dev4.onrender.com";
+//int port = 443;
+const char* serverAddress = "192.168.129.221";
+int port = 5001;
 
 WiFiSSLClient wifi;
 HttpClient client = HttpClient(wifi, serverAddress, port);

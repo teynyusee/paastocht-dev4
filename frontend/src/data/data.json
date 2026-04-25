@@ -1,0 +1,109 @@
+{
+  "settings": {
+    "maxEggs": 12,
+    "timerDuration": 20
+  },
+
+  "intro": {
+        "audio": "/audio/intro.mp3",
+        "subtitles": [
+         { 
+            "text": "Hallo daar!", 
+            "time": 0 
+         },
+         { 
+            "text": "Ik ben het paaskonijn", 
+            "time": 0.94 
+         },
+         { 
+            "text": "Ik moet zo veel mogelijk eieren verzamelen...", 
+            "time": 2.74 
+         },
+         { 
+            "text": "voor het grote paasfeest...", 
+            "time": 5.23
+         },
+         { 
+            "text": "Maar ik heb hulp nodig", 
+            "time": 7.37
+         },
+         { 
+            "text": "Willen jullie mij helpen zoeken?", 
+            "time": 9.12
+         },
+         { 
+            "text": "Als je er eentje vindt...", 
+            "time": 11.29
+         },
+         { 
+            "text": "leg je het in het mandje.", 
+            "time": 12.73
+         },
+         { 
+            "text": "Zijn jullie klaar?", 
+            "time": 14.84 
+         },
+         { 
+            "text": "Veel succes!", 
+            "time": 16.3
+         }
+        ]
+    },
+
+  "eggScans": [
+    {
+      "text": "Yes! Nog eentje erbij!",
+      "audio": "/audio/een-erbij.mp3"
+    },
+    {
+      "text": "Nog eentje gevonden!",
+      "audio": "/audio/goed-bezig.mp3"
+    },
+    {
+      "text": "Wauw, goed bezig!",
+      "audio": "/audio/goed-gevonden.mp3"
+    },
+    {
+      "text": "Slim gevonden!",
+      "audio": "/audio/slim-gevonden.mp3"
+    },
+    {
+      "text": "Super gedaan!",
+      "audio": "/audio/super-gedaan.mp3"
+    }
+  ],
+
+  "end": {
+        "audio": "/audio/eindboodschap.mp3",
+        "subtitles": [
+         { 
+            "text": "Wauw! ", 
+            "time": 0 
+         },
+         { 
+            "text": "Jullie hebben super goed gezocht!", 
+            "time": 0.54
+         },
+         { 
+            "text": "Dank jullie wel voor jullie hulp!", 
+            "time": 2.79
+         },
+         { 
+            "text": "Het paasfeest is gered!", 
+            "time": 4.55
+         },
+         { 
+            "text": "En natuurlijk...", 
+            "time": 6.90
+         },
+         { 
+            "text": "krijgen jullie een beloning!", 
+            "time": 8.10
+         },
+         { 
+            "text": "Geniet van jullie paaseitjes!", 
+            "time": 10.06
+         }
+        ]
+    }
+}

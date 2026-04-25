@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./Timer.css";
 
-export default function Timer({ duration }: { duration: number }) {
+export default function Timer({ duration, onTimeUp }: { duration: number, onTimeUp?: () => void }) {
   const [timeLeft, setTimeLeft] = useState(duration);
 
   useEffect(() => {
@@ -11,6 +11,7 @@ export default function Timer({ duration }: { duration: number }) {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(interval);
+          if (onTimeUp) onTimeUp(); 
           return 0;
         }
         return t - 1;
@@ -18,7 +19,7 @@ export default function Timer({ duration }: { duration: number }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration]);
+  }, [duration, onTimeUp]);
 
   const progress = timeLeft / duration;
 

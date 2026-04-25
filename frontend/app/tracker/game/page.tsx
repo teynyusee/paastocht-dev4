@@ -20,7 +20,7 @@ export default function GamePage() {
   // switch: true = backend, false = keyboard test
   const USE_BACKEND = false;
 
-  
+
   // 🔥 1 centrale functie → ALLES gebruikt deze
   const addEgg = useCallback(() => {
     let didAddEgg = false;
@@ -82,19 +82,25 @@ export default function GamePage() {
   }, []);
 
   // 🎯 END GAME LOGIC
+  // Centrale functie om het spel te beëindigen
+  const endGame = useCallback(() => {
+    if (hasEnded.current) return;
+    hasEnded.current = true;
+
+    setTimeout(() => {
+      router.push("/tracker/end");
+    }, 1500);
+  }, [router]);
+
   useEffect(() => {
     if (eggs === maxEggs && !hasEnded.current) {
-      hasEnded.current = true;
-
-      setTimeout(() => {
-        router.push("/tracker/end");
-      }, 1500);
+     endGame();
     }
-  }, [eggs, maxEggs, router]);
+  }, [eggs, maxEggs, endGame]);
 
   return (
     <div className="bg__grass game-page">
-      <Timer duration={scriptData.settings.timerDuration} />
+      <Timer duration={scriptData.settings.timerDuration} onTimeUp={endGame} />
       <EggGrid count={eggs} />
     </div>
   );

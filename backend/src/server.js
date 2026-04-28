@@ -14,14 +14,12 @@ const io = new Server(server, {
   },
 });
 
-// 👉 socket connect
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 });
 
-// 👉 export zodat we die kunnen gebruiken
 app.set("io", io);
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });

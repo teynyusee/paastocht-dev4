@@ -18,7 +18,7 @@ export default function GamePage() {
   const hasEnded = useRef(false);
 
   // switch: true = backend, false = keyboard test
-  const USE_BACKEND = false;
+  const USE_BACKEND = true;
 
 
   // 🔥 1 centrale functie → ALLES gebruikt deze

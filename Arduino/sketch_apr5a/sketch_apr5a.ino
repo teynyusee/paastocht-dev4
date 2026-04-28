@@ -8,36 +8,36 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-// 🔑 WIFI
-const char* ssid = "Proximus-Home-201829_EXT";
-const char* password = "be7seyjw732ee7ff";
+// WIFI
+const char* ssid = "iPhone van Teynur";
+const char* password = "teynur233";
 
-// 🌐 BACKEND
-//const char* serverAddress = "https://paastocht-dev4.onrender.com";
-//int port = 443;
+// BACKEND
 const char* serverAddress = "192.168.129.221";
 int port = 5001;
 
-WiFiSSLClient wifi;
-HttpClient client = HttpClient(wifi, serverAddress, port);
+WiFiClient wifi;
+HttpClient client(wifi, serverAddress, port);
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  // NFC
   SPI.begin();
   mfrc522.PCD_Init();
 
-  // WIFI connect
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.begin(ssid, password) != WL_CONNECTED) {
+  Serial.println("RC522 gestart");
+  Serial.println("Connecting to WiFi...");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
   }
 
   Serial.println("\nConnected!");
-  Serial.print("IP: ");
+  Serial.print("Arduino IP: ");
   Serial.println(WiFi.localIP());
 
   Serial.println("Hou een tag tegen de reader...");
@@ -59,23 +59,42 @@ void loop() {
   Serial.print("UID: ");
   Serial.println(uid);
 
-  // 🔥 MAP NAAR eggId
   String eggId = mapUIDtoEgg(uid);
 
   Serial.print("Mapped to: ");
   Serial.println(eggId);
 
-  sendToBackend(eggId);
+  if (eggId == "unknown") {
+    Serial.println("Onbekende tag - niets verstuurd.");
+    mfrc522.PICC_HaltA();
+    mfrc522.PCD_StopCrypto1();
+    delay(200);
+    return;
+  }
 
-  delay(2000); // anti-spam
+  sendToBackend(eggId);
 
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
+
+  delay(200);
 }
 
 String mapUIDtoEgg(String uid) {
   if (uid == "C4E67CB0") return "egg-1";
 
+  // Voeg hier je andere tags toe:
+  if (uid == "XXXXXXXX") return "egg-2";
+  if (uid == "YYYYYYYY") return "egg-3";
+  if (uid == "ZZZZZZZZ") return "egg-4";
+  if (uid == "AAAAAAAA") return "egg-5";
+  if (uid == "BBBBBBBB") return "egg-6";
+  if (uid == "CCCCCCCC") return "egg-7";
+  if (uid == "DDDDDDDD") return "egg-8";
+  if (uid == "EEEEEEEE") return "egg-9";
+  if (uid == "FFFFFFFF") return "egg-10";
+  if (uid == "11111111") return "egg-11";
+  if (uid == "22222222") return "egg-12";
 
   return "unknown";
 }
@@ -83,12 +102,23 @@ String mapUIDtoEgg(String uid) {
 void sendToBackend(String eggId) {
   String path = "/api/scan";
   String contentType = "application/json";
-
   String body = "{\"eggId\":\"" + eggId + "\"}";
 
   Serial.println("Sending to backend...");
+  Serial.print("POST ");
+  Serial.print(serverAddress);
+  Serial.print(":");
+  Serial.println(port);
+  Serial.print("Body: ");
+  Serial.println(body);
 
-  client.post(path, contentType, body);
+  client.beginRequest();
+  client.post(path);
+  client.sendHeader("Content-Type", contentType);
+  client.sendHeader("Content-Length", body.length());
+  client.beginBody();
+  client.print(body);
+  client.endRequest();
 
   int statusCode = client.responseStatusCode();
   String response = client.responseBody();
@@ -98,4 +128,6 @@ void sendToBackend(String eggId) {
 
   Serial.print("Response: ");
   Serial.println(response);
+
+  client.stop();
 }

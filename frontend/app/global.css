@@ -1,0 +1,22 @@
+:root {
+  font-family: "Courgette", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+.bg__eggs {
+  height: 100svh;
+  background-color: rgb(242, 0, 255);
+  background-image: url("/images/bg_eggs.png");
+  background-size: cover;
+  background-position: bottom center;
+}
+
+.bg__grass{
+  height: 100svh;
+  background-color: rgb(242, 0, 255);
+  background-image: url("/images/bg_grass.png");
+  background-size: cover;
+  background-position: bottom center;
+}

@@ -1,0 +1,13 @@
+.audio-player {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.audio-player__text {
+  font-size: 2rem;
+  color: black;
+  text-align: center;
+  max-width: 80%;
+}

@@ -1,4 +1,4 @@
-const API_URL = "http://192.168.129.219:5001";
+import { API_URL } from "./constants";
 
 export async function getGameState() {
   const res = await fetch(`${API_URL}/api/state`, {

@@ -1,5 +1,6 @@
 import { io } from "socket.io-client";
+import { SOCKET_URL } from "./constants";
 
-export const socket = io("http://192.168.129.219:5001", {
+export const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
 });

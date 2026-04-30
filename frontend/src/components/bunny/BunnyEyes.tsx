@@ -1,11 +1,11 @@
 import type { Offset } from "./BunnyFace";
 
-type Props = {
+type BunnyEyesProps = {
   offset: Offset;
   blink: boolean;
 };
 
-export default function BunnyEyes({ offset, blink }: Props) {
+export default function BunnyEyes({ offset, blink }: BunnyEyesProps) {
   return (
     <div className="face-eyes-row">
       <Eye offset={offset} blink={blink} />
@@ -14,7 +14,7 @@ export default function BunnyEyes({ offset, blink }: Props) {
   );
 }
 
-function Eye({ offset, blink }: Props) {
+function Eye({ offset, blink }: BunnyEyesProps) {
   return (
     <div
       className="face-eye-white"

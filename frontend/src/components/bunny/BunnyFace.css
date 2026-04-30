@@ -1,13 +1,33 @@
+/* =========================
+   RESET / PAGE
+========================= */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================
+   PAGE WRAPPER
+========================= */
+
 .face-page {
   width: 100vw;
   height: 100vh;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
+/* hidden camera */
 .face-video {
   position: fixed;
   width: 1px;
@@ -16,25 +36,34 @@
   pointer-events: none;
 }
 
+/* =========================
+   FACE CONTAINER
+========================= */
+
 .face {
   position: relative;
-  transform: scale(2);
+  transform: scale(2.2);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
+
+/* =========================
+   EYES
+========================= */
 
 .face-eyes-row {
   display: flex;
-  gap: 80px;
-  margin-bottom: 30px;
+  gap: 90px;
+  margin-bottom: 28px;
 }
 
 .face-eye-white {
   width: 130px;
   height: 130px;
-  background: white;
-  border: 8px solid black;
+  background: #fff;
+  border: 8px solid #000;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -44,17 +73,18 @@
 
 .face-pupil {
   position: relative;
-  width: 58px;
-  height: 58px;
-  background: black;
+  width: 56px;
+  height: 56px;
+  background: #000;
   border-radius: 999px;
   will-change: transform;
+  transition: transform 0.08s linear;
 }
 
 .face-shine {
   position: absolute;
-  background: white;
   border-radius: 999px;
+  background: #fff;
 }
 
 .face-shine--big {
@@ -65,57 +95,32 @@
 }
 
 .face-shine--small {
-  top: 31px;
+  top: 30px;
   left: 34px;
   width: 9px;
   height: 9px;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.7);
 }
+
+/* =========================
+   NOSE
+========================= */
 
 .face-nose {
   width: 24px;
   height: 16px;
   background: #f472b6;
   border-radius: 999px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-.face-smile {
-  position: relative;
-  width: 86px;
-  height: 42px;
-}
-
-.face-smile-left {
-  position: absolute;
-  left: 4px;
-  width: 40px;
-  height: 34px;
-  border-bottom: 5px solid black;
-  border-radius: 0 0 999px 999px;
-}
-
-.face-smile-right {
-  position: absolute;
-  right: 4px;
-  width: 40px;
-  height: 34px;
-  border-bottom: 5px solid black;
-  border-radius: 0 0 999px 999px;
-}
-
-.face-mouth--talking {
-  width: 48px;
-  height: 34px;
-  background: black;
-  border-radius: 999px;
-  animation: faceTalk 0.18s infinite alternate ease-in-out;
-  margin-top: 4px;
-}
+/* =========================
+   CHEEKS
+========================= */
 
 .face-cheek {
   position: absolute;
-  top: 116px;
+  top: 120px;
   width: 42px;
   height: 24px;
   background: #fbcfe8;
@@ -123,64 +128,85 @@
 }
 
 .face-cheek--left {
-  left: -96px;
+  left: -100px;
 }
 
 .face-cheek--right {
-  right: -96px;
+  right: -100px;
 }
 
-.face-start-button,
-.face-restart-button {
-  position: fixed;
-  z-index: 50;
-  top: 24px;
-  border: none;
-  border-radius: 999px;
-  background: black;
-  color: white;
-  font-size: 1rem;
-  font-weight: 800;
-  padding: 0.9rem 1.5rem;
-  cursor: pointer;
-}
+/* =========================
+   START BUTTON
+========================= */
 
 .face-start-button {
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.face-restart-button {
-  right: 24px;
-}
-
-.face-speech {
   position: fixed;
-  bottom: 48px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 760px;
-  padding: 1rem 1.5rem;
+  z-index: 50;
+
+  border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  color: black;
-  font-size: 2rem;
+  background: #000;
+  color: #fff;
+
+  font-size: 1rem;
   font-weight: 800;
-  text-align: center;
+  padding: 0.9rem 1.6rem;
+
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-@keyframes faceTalk {
+.face-start-button:hover {
+  transform: translateX(-50%) scale(1.05);
+}
+
+/* =========================
+   TALKING MOUTH (CLEAN)
+========================= */
+
+.face-mouth-wrapper {
+  width: 120px;
+  height: 70px;
+  margin-top: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* idle (smile) */
+.talk-mouth {
+  width: 78px;
+  height: 28px;
+  border: 6px solid #000;
+  border-top: 0;
+  border-radius: 0 0 999px 999px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+/* talking state */
+.talk-mouth.is-talking {
+  width: 58px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: #000;
+
+  animation: bunnyTalk 0.18s infinite alternate ease-in-out;
+}
+
+/* animation */
+@keyframes bunnyTalk {
   from {
-    height: 14px;
-    transform: scaleX(1.15);
+    height: 16px;
+    transform: scaleX(1.25);
   }
 
   to {
-    height: 44px;
+    height: 48px;
     transform: scaleX(0.9);
   }
-}
-
-body::-webkit-scrollbar {
-  display: none;
 }

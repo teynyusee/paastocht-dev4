@@ -1,62 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getGameState, resetGame } from "@/src/lib/api";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+import { getGameState } from "@/src/lib/api";
 import { socket } from "@/src/lib/socket";
 
-export default function TrackerPage() {
-  const [state, setState] = useState<any>(null);
+import "./StartPage.css";
+
+type GameState = {
+  phase?: "idle" | "intro" | "game" | "end";
+  totalEggs: number;
+  foundEggs: string[];
+};
+
+export default function StartPage() {
+  const router = useRouter();
 
   useEffect(() => {
-    getGameState().then(setState);
+    socket.connect();
 
-    socket.on("game:update", (newState) => {
-      setState(newState);
-    });
+    const checkState = async () => {
+      const state: GameState = await getGameState();
+
+      if (state.phase === "intro") {
+        router.replace("/tracker/intro");
+      }
+
+      if (state.phase === "game") {
+        router.replace("/tracker/game");
+      }
+
+      if (state.phase === "end") {
+        router.replace("/tracker/end");
+      }
+    };
+
+    checkState();
+
+    const handleStart = () => {
+      router.replace("/tracker/intro");
+    };
+
+    const handleUpdate = (state: GameState) => {
+      if (state.phase === "intro") {
+        router.replace("/tracker/intro");
+      }
+    };
+
+    socket.on("tracker:start", handleStart);
+    socket.on("game:update", handleUpdate);
 
     return () => {
-      socket.off("game:update");
+      socket.off("tracker:start", handleStart);
+      socket.off("game:update", handleUpdate);
     };
-  }, []);
+  }, [router]);
 
-  if (!state) return <div>Loading...</div>;
-
-  const handleReset = async () => {
-    const updatedState = await resetGame();
-    setState(updatedState);
+  useEffect(() => {
+  const handleReset = () => {
+    window.location.replace("/tracker");
   };
 
+  socket.on("tracker:reset", handleReset);
+
+  return () => {
+    socket.off("tracker:reset", handleReset);
+  };
+}, []);
+
   return (
-    <div className="min-h-screen bg-yellow-100 p-6">
-      <button
-        onClick={handleReset}
-        className="mt-6 p-3 bg-red-500 text-white rounded"
-      >
-        Reset Game
-      </button>
-
-      <h1 className="text-3xl font-bold mb-4">🐣 Egg Tracker</h1>
-
-      <p className="mb-4">
-        Found: {state.foundEggs.length} / {state.totalEggs}
-      </p>
-
-      <div className="grid grid-cols-3 gap-4">
-        {Array.from({ length: state.totalEggs }).map((_, i) => {
-          const eggId = `egg-${i + 1}`;
-          const found = state.foundEggs.includes(eggId);
-
-          return (
-            <div
-              key={eggId}
-              className={`p-6 rounded-xl text-center ${
-                found ? "bg-green-400" : "bg-gray-300"
-              }`}
-            >
-              🥚 {i + 1}
-            </div>
-          );
-        })}
+    <div className="bg__eggs start-page">
+      <div className="start-page__panel">
+        <h1>Paaszoektocht</h1>
+        <p>Wacht tot het paaskonijn het spel start...</p>
       </div>
     </div>
   );

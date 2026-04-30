@@ -1,0 +1,186 @@
+.face-page {
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.face-video {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.face {
+  position: relative;
+  transform: scale(2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.face-eyes-row {
+  display: flex;
+  gap: 80px;
+  margin-bottom: 30px;
+}
+
+.face-eye-white {
+  width: 130px;
+  height: 130px;
+  background: white;
+  border: 8px solid black;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.face-pupil {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  background: black;
+  border-radius: 999px;
+  will-change: transform;
+}
+
+.face-shine {
+  position: absolute;
+  background: white;
+  border-radius: 999px;
+}
+
+.face-shine--big {
+  top: 10px;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+}
+
+.face-shine--small {
+  top: 31px;
+  left: 34px;
+  width: 9px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.face-nose {
+  width: 24px;
+  height: 16px;
+  background: #f472b6;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.face-smile {
+  position: relative;
+  width: 86px;
+  height: 42px;
+}
+
+.face-smile-left {
+  position: absolute;
+  left: 4px;
+  width: 40px;
+  height: 34px;
+  border-bottom: 5px solid black;
+  border-radius: 0 0 999px 999px;
+}
+
+.face-smile-right {
+  position: absolute;
+  right: 4px;
+  width: 40px;
+  height: 34px;
+  border-bottom: 5px solid black;
+  border-radius: 0 0 999px 999px;
+}
+
+.face-mouth--talking {
+  width: 48px;
+  height: 34px;
+  background: black;
+  border-radius: 999px;
+  animation: faceTalk 0.18s infinite alternate ease-in-out;
+  margin-top: 4px;
+}
+
+.face-cheek {
+  position: absolute;
+  top: 116px;
+  width: 42px;
+  height: 24px;
+  background: #fbcfe8;
+  border-radius: 999px;
+}
+
+.face-cheek--left {
+  left: -96px;
+}
+
+.face-cheek--right {
+  right: -96px;
+}
+
+.face-start-button,
+.face-restart-button {
+  position: fixed;
+  z-index: 50;
+  top: 24px;
+  border: none;
+  border-radius: 999px;
+  background: black;
+  color: white;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.9rem 1.5rem;
+  cursor: pointer;
+}
+
+.face-start-button {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.face-restart-button {
+  right: 24px;
+}
+
+.face-speech {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 760px;
+  padding: 1rem 1.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: black;
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+@keyframes faceTalk {
+  from {
+    height: 14px;
+    transform: scaleX(1.15);
+  }
+
+  to {
+    height: 44px;
+    transform: scaleX(0.9);
+  }
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}

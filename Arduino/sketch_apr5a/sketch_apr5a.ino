@@ -8,28 +8,29 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-// 🔑 WIFI
+// WIFI
 const char* ssid = "Proximus-Home-201829_EXT";
 const char* password = "be7seyjw732ee7ff";
 
-// 🌐 BACKEND
-//const char* serverAddress = "https://paastocht-dev4.onrender.com";
-//int port = 443;
-const char* serverAddress = "192.168.129.221";
+// LOKALE BACKEND
+const char* serverAddress = "192.168.129.219";
 int port = 5001;
 
-WiFiSSLClient wifi;
-HttpClient client = HttpClient(wifi, serverAddress, port);
+WiFiClient wifi;
+HttpClient client(wifi, serverAddress, port);
+
+// 4 tags lokaal bijhouden
+const int TOTAL_EGGS = 4;
+String foundEggs[TOTAL_EGGS];
+int foundCount = 0;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  // NFC
   SPI.begin();
   mfrc522.PCD_Init();
 
-  // WIFI connect
   Serial.print("Connecting to WiFi...");
   while (WiFi.begin(ssid, password) != WL_CONNECTED) {
     delay(1000);
@@ -47,6 +48,45 @@ void loop() {
   if (!mfrc522.PICC_IsNewCardPresent()) return;
   if (!mfrc522.PICC_ReadCardSerial()) return;
 
+  String uid = getUID();
+  String eggId = mapUIDtoEgg(uid);
+
+  Serial.print("UID: ");
+  Serial.println(uid);
+
+  Serial.print("Mapped to: ");
+  Serial.println(eggId);
+
+  if (eggId == "unknown") {
+    Serial.println("Unknown tag, niet gestuurd.");
+  } else if (alreadyFound(eggId)) {
+    Serial.println("Deze egg is al gescand in deze ronde.");
+  } else {
+    foundEggs[foundCount] = eggId;
+    foundCount++;
+
+    sendToBackend(eggId);
+
+    Serial.print("Found count: ");
+    Serial.print(foundCount);
+    Serial.print(" / ");
+    Serial.println(TOTAL_EGGS);
+
+    if (foundCount >= TOTAL_EGGS) {
+      Serial.println("Alle 4 tags gevonden. Arduino reset lokale scanlijst.");
+      resetLocalScans();
+    }
+  }
+
+  Serial.println("--------------------");
+
+  delay(1000);
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}
+
+String getUID() {
   String uid = "";
 
   for (byte i = 0; i < mfrc522.uid.size; i++) {
@@ -55,38 +95,45 @@ void loop() {
   }
 
   uid.toUpperCase();
-
-  Serial.print("UID: ");
-  Serial.println(uid);
-
-  // 🔥 MAP NAAR eggId
-  String eggId = mapUIDtoEgg(uid);
-
-  Serial.print("Mapped to: ");
-  Serial.println(eggId);
-
-  sendToBackend(eggId);
-
-  delay(2000); // anti-spam
-
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
+  return uid;
 }
 
 String mapUIDtoEgg(String uid) {
   if (uid == "C4E67CB0") return "egg-1";
-
+  if (uid == "1DFAA406051080") return "egg-2";
+  if (uid == "1DF8A406051080") return "egg-3";
+  if (uid == "1DF9A406051080") return "egg-4";
 
   return "unknown";
+}
+
+bool alreadyFound(String eggId) {
+  for (int i = 0; i < foundCount; i++) {
+    if (foundEggs[i] == eggId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void resetLocalScans() {
+  for (int i = 0; i < TOTAL_EGGS; i++) {
+    foundEggs[i] = "";
+  }
+
+  foundCount = 0;
+
+  Serial.println("Lokale Arduino scanlijst is gereset.");
 }
 
 void sendToBackend(String eggId) {
   String path = "/api/scan";
   String contentType = "application/json";
-
   String body = "{\"eggId\":\"" + eggId + "\"}";
 
-  Serial.println("Sending to backend...");
+  Serial.println("Sending to local backend...");
+  Serial.println(body);
 
   client.post(path, contentType, body);
 
@@ -98,4 +145,6 @@ void sendToBackend(String eggId) {
 
   Serial.print("Response: ");
   Serial.println(response);
+
+  client.stop();
 }

@@ -1,0 +1,27 @@
+.timer {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.timer-border {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.timer-border__svg {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+.timer-border__text {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+  font-weight: bold;
+}

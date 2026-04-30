@@ -1,6 +1,5 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5001";
-
-export const socket = io(SOCKET_URL);
+export const socket = io("http://192.168.129.219:5001", {
+  transports: ["websocket", "polling"],
+});

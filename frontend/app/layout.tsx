@@ -5,7 +5,6 @@ import "./global.css";
 const courgette = Courgette({
   subsets: ["latin"],
   weight: "400",
-  
 });
 
 export default function RootLayout({

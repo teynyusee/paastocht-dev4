@@ -1,17 +1,32 @@
 .start-page {
   min-height: 100vh;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
   text-align: center;
-  background: #fff2c7;
+  /*background: #fff2c7;*/
+
+  padding: 5rem;
 }
 
-.start-page__panel {
+/*.start-page__panel {
   border-radius: 2rem;
   background: rgba(255, 255, 255, 0.85);
   padding: 2rem 3rem;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2rem;
+}*/
+.start-page__panel {
+  position: relative;
+  width: 80%;
+  height: 52%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .start-page__panel h1 {
@@ -20,6 +35,52 @@
 }
 
 .start-page__panel p {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
+  color: #680072;
+}
+
+
+
+.banner {
+  width: 80%;
+  height: auto;
+}
+.ribbon {
+  fill: #680072;
+}
+.ribbon-text {
+  fill: #ffffff;
+}
+
+
+.hidden {
+  display: none;
+}
+
+.clap-icon{
+  width: 7rem;
+  height: auto;
+  position: absolute;
+  bottom: 0%;
+  right: 15%;
+}
+.clap-line{
+  fill: #680072;
+}
+
+.kid{
+  width: 8rem;
+  height: auto;
+  position: absolute;
+  top: 10%;
+  left: 15%;
+  rotate: -7deg;
+}
+.kid-line{
+  stroke-width: 8;
+  stroke: #680072;
+}
+.eye-fill{
+  fill: #680072;
 }

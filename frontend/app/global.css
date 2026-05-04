@@ -35,3 +35,8 @@ body::-webkit-scrollbar {
   justify-content: center;
   align-items: center;
 }
+
+.text {
+    font-size: 2rem;
+    color: #680072;
+}

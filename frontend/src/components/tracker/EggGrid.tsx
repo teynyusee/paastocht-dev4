@@ -16,7 +16,7 @@ export default function EggGrid({ count, max = 12 }: Props) {
         const isVisible = index < count;
 
         return (
-          <div key={eggNumber} className="egg-grid__cell">
+          <div key={eggNumber} className="bg__grass egg-grid__cell">
             {isVisible && (
               <Image
                 src={`/images/egg-${eggNumber}.png`}

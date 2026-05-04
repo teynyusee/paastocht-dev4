@@ -1,3 +1,13 @@
+import { Courgette } from "next/font/google";
+import "./reset.css"
+import "./global.css";
+
+const courgette = Courgette({
+  subsets: ["latin"],
+  weight: "400",
+  
+});
+
 export default function RootLayout({
   children,
 }: {
@@ -5,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body className={courgette.className}>{children}</body>
     </html>
   );
 }

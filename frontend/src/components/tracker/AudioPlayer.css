@@ -11,3 +11,7 @@
   text-align: center;
   max-width: 80%;
 }
+
+.audio-player__subtitle{
+  font-size: 2rem;
+}

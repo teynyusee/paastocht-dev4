@@ -7,3 +7,31 @@ html, body {
 body::-webkit-scrollbar {
   display: none;
 }
+
+.bg__eggs {
+  width: 100vw;
+  height: 100vh;
+
+  background-image: url("/images/bg_eggs.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bg__grass {
+  width: 100vw;
+  height: 100vh;
+
+  background-image: url("/images/bg_grass.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

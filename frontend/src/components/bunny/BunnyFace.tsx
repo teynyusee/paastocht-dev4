@@ -36,6 +36,10 @@ type FaceAudioPayload = {
   src: string;
 };
 
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
 export default function BunnyFace() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const landmarkerRef = useRef<FaceLandmarker | null>(null);
@@ -48,6 +52,9 @@ export default function BunnyFace() {
   const currentOffsetRef = useRef<Offset>({ x: 0, y: 0 });
   const targetOffsetRef = useRef<Offset>({ x: 0, y: 0 });
   const detectFrameRef = useRef<number | null>(null);
+
+  const lastDetectionTimeRef = useRef(0);
+  const noFaceFramesRef = useRef(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -109,16 +116,16 @@ export default function BunnyFace() {
     await startGame();
   };
 
-const handleResetGame = async () => {
-  stopCurrentAudio();
-  setGameStarted(false);
+  const handleResetGame = async () => {
+    stopCurrentAudio();
+    setGameStarted(false);
 
-  try {
-    await resetGame();
-  } catch (error) {
-    console.warn("Reset mislukt:", error);
-  }
-};
+    try {
+      await resetGame();
+    } catch (error) {
+      console.warn("Reset mislukt:", error);
+    }
+  };
 
   const playFaceAudio = useCallback(
     async (payload: FaceAudioPayload) => {
@@ -232,16 +239,13 @@ const handleResetGame = async () => {
     let cancelled = false;
 
     async function startFaceTracking() {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
-      );
+      const vision = await FilesetResolver.forVisionTasks("/mediapipe/wasm");
 
       if (cancelled) return;
 
       landmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          modelAssetPath: "/mediapipe/face_landmarker.task",
           delegate: "CPU",
         },
         runningMode: "VIDEO",
@@ -251,8 +255,9 @@ const handleResetGame = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          width: { ideal: 320 },
+          height: { ideal: 240 },
+          frameRate: { ideal: 15, max: 20 },
         },
         audio: false,
       });
@@ -268,21 +273,38 @@ const handleResetGame = async () => {
     function detect() {
       const video = videoRef.current;
       const landmarker = landmarkerRef.current;
+      const now = performance.now();
+
+      if (now - lastDetectionTimeRef.current < 66) {
+        detectFrameRef.current = requestAnimationFrame(detect);
+        return;
+      }
+
+      lastDetectionTimeRef.current = now;
 
       if (video && landmarker && video.readyState >= 2) {
         try {
-          const result = landmarker.detectForVideo(video, performance.now());
+          const result = landmarker.detectForVideo(video, now);
           const face = result.faceLandmarks?.[0];
 
           if (face) {
+            noFaceFramesRef.current = 0;
+
             const nose = face[1];
+            const rawX = (nose.x - 0.5) * -180;
+            const rawY = (nose.y - 0.5) * 100;
 
             targetOffsetRef.current = {
-              x: (nose.x - 0.5) * -260,
-              y: (nose.y - 0.5) * 160,
+              x: clamp(rawX, -60, 60),
+              y: clamp(rawY, -35, 35),
             };
           } else {
-            targetOffsetRef.current = { x: 0, y: 0 };
+            noFaceFramesRef.current += 1;
+
+            // Niet direct naar midden springen bij 1 gemiste detectie.
+            if (noFaceFramesRef.current > 8) {
+              targetOffsetRef.current = { x: 0, y: 0 };
+            }
           }
         } catch {
           // ignore temporary MediaPipe frame errors
@@ -316,10 +338,11 @@ const handleResetGame = async () => {
       const current = currentOffsetRef.current;
       const target = targetOffsetRef.current;
 
+      // Lager getal = zachter/trager volgen.
       const next = {
-        x: current.x + (target.x - current.x) * 0.16,
-        y: current.y + (target.y - current.y) * 0.16,
-      };
+      x: current.x + (target.x - current.x) * 0.14,
+      y: current.y + (target.y - current.y) * 0.14,
+    };
 
       currentOffsetRef.current = next;
       setEyeOffset(next);
@@ -346,16 +369,16 @@ const handleResetGame = async () => {
       <video ref={videoRef} muted playsInline autoPlay className="face-video" />
 
       <div className="face-buttons">
-      {!gameStarted && (
-        <button className="face-start-button" onClick={unlockAndStart}>
-          Start spel + geluid
-        </button>
-      )}
+        {!gameStarted && (
+          <button className="face-start-button" onClick={unlockAndStart}>
+            Start spel + geluid
+          </button>
+        )}
 
-      <button className="face-reset-button" onClick={handleResetGame}>
-        Reset spel
-      </button>
-    </div>
+        <button className="face-reset-button" onClick={handleResetGame}>
+          Reset spel
+        </button>
+      </div>
 
       <section className="face">
         <BunnyEyes offset={eyeOffset} blink={blink} />

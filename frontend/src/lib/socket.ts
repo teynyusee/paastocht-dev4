@@ -2,15 +2,21 @@ import { io } from "socket.io-client";
 import { SOCKET_URL } from "./constants";
 
 export const socket = io(SOCKET_URL, {
-  transports: ["polling", "websocket"],
+  transports: ["websocket", "polling"],
+  autoConnect: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
 });
 
 socket.on("connect", () => {
-  console.log("Socket connected:", socket.id, "URL:", SOCKET_URL);
+  console.info("Socket connected:", socket.id, "URL:", SOCKET_URL);
 });
 
 socket.on("connect_error", (error) => {
-  console.error("Socket connect error:", error.message);
+
+  console.warn("Socket connect warning:", error.message, "URL:", SOCKET_URL);
 });
 
 socket.on("disconnect", (reason) => {

@@ -1,5 +1,4 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
+const HOST = process.env.NEXT_PUBLIC_HOST ?? "localhost";
 
-export const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:5001";
+export const API_URL = `http://${HOST}:5001`;
+export const SOCKET_URL = `http://${HOST}:5001`;

@@ -3,94 +3,70 @@
 #include <WiFiS3.h>
 #include <ArduinoHttpClient.h>
 
+// =======================
+// NFC READER PINS
+// =======================
+// Voor MFRC522:
+// SDA / SS  -> D10
+// SCK       -> D13
+// MOSI      -> D11
+// MISO      -> D12
+// RST       -> D9
+// 3.3V      -> 3.3V
+// GND       -> GND
+
 #define SS_PIN 10
 #define RST_PIN 9
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-// WIFI
-const char* ssid = "Proximus-Home-201829_EXT";
-const char* password = "be7seyjw732ee7ff";
+// =======================
+// WIFI SETTINGS
+// =======================
 
-// LOKALE BACKEND
-const char* serverAddress = "192.168.129.219";
-int port = 5001;
+const char* ssid = "iPhone van Teynur";
+const char* password = "teynur233";
 
+// =======================
+// RASPBERRY PI BACKEND
+// =======================
+
+// const char* serverAddress = "172.20.10.4";
+
+const char* serverAddress = "paaskonijn.local";
+const int serverPort = 5001;
+
+// Geen SSL, gewoon lokaal HTTP
 WiFiClient wifi;
-HttpClient client(wifi, serverAddress, port);
+HttpClient client(wifi, serverAddress, serverPort);
 
-// 4 tags lokaal bijhouden
-const int TOTAL_EGGS = 4;
-String foundEggs[TOTAL_EGGS];
-int foundCount = 0;
+// =======================
+// SCAN SETTINGS
+// =======================
 
-void setup() {
-  Serial.begin(9600);
-  while (!Serial);
+String lastUID = "";
+unsigned long lastScanTime = 0;
 
-  SPI.begin();
-  mfrc522.PCD_Init();
+// Zelfde tag mag pas opnieuw na 2 seconden verstuurd worden.
+// Andere tags mogen direct.
+const unsigned long sameTagCooldown = 2000;
 
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.begin(ssid, password) != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
+// WiFi reconnect check
+unsigned long lastWifiCheck = 0;
+const unsigned long wifiCheckInterval = 5000;
 
-  Serial.println("\nConnected!");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
+// =======================
+// HELPERS
+// =======================
 
-  Serial.println("Hou een tag tegen de reader...");
-}
-
-void loop() {
-  if (!mfrc522.PICC_IsNewCardPresent()) return;
-  if (!mfrc522.PICC_ReadCardSerial()) return;
-
-  String uid = getUID();
-  String eggId = mapUIDtoEgg(uid);
-
-  Serial.print("UID: ");
-  Serial.println(uid);
-
-  Serial.print("Mapped to: ");
-  Serial.println(eggId);
-
-  if (eggId == "unknown") {
-    Serial.println("Unknown tag, niet gestuurd.");
-  } else if (alreadyFound(eggId)) {
-    Serial.println("Deze egg is al gescand in deze ronde.");
-  } else {
-    foundEggs[foundCount] = eggId;
-    foundCount++;
-
-    sendToBackend(eggId);
-
-    Serial.print("Found count: ");
-    Serial.print(foundCount);
-    Serial.print(" / ");
-    Serial.println(TOTAL_EGGS);
-
-    if (foundCount >= TOTAL_EGGS) {
-      Serial.println("Alle 4 tags gevonden. Arduino reset lokale scanlijst.");
-      resetLocalScans();
-    }
-  }
-
-  Serial.println("--------------------");
-
-  delay(1000);
-
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
-}
-
-String getUID() {
+String getUidString() {
   String uid = "";
 
   for (byte i = 0; i < mfrc522.uid.size; i++) {
-    if (mfrc522.uid.uidByte[i] < 0x10) uid += "0";
+    if (mfrc522.uid.uidByte[i] < 0x10) {
+      uid += "0";
+    }
+
     uid += String(mfrc522.uid.uidByte[i], HEX);
   }
 
@@ -98,53 +74,162 @@ String getUID() {
   return uid;
 }
 
-String mapUIDtoEgg(String uid) {
-  if (uid == "C4E67CB0") return "egg-1";
-  if (uid == "1DFAA406051080") return "egg-2";
-  if (uid == "1DF8A406051080") return "egg-3";
-  if (uid == "1DF9A406051080") return "egg-4";
-
-  return "unknown";
-}
-
-bool alreadyFound(String eggId) {
-  for (int i = 0; i < foundCount; i++) {
-    if (foundEggs[i] == eggId) {
-      return true;
-    }
+void connectToWifi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return;
   }
 
-  return false;
-}
+  Serial.println();
+  Serial.println("Verbinden met WiFi...");
+  Serial.print("SSID: ");
+  Serial.println(ssid);
 
-void resetLocalScans() {
-  for (int i = 0; i < TOTAL_EGGS; i++) {
-    foundEggs[i] = "";
+  WiFi.begin(ssid, password);
+
+  int tries = 0;
+
+  while (WiFi.status() != WL_CONNECTED && tries < 30) {
+    delay(500);
+    Serial.print(".");
+    tries++;
   }
 
-  foundCount = 0;
+  Serial.println();
 
-  Serial.println("Lokale Arduino scanlijst is gereset.");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi verbonden!");
+    Serial.print("Arduino IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Backend: http://");
+    Serial.print(serverAddress);
+    Serial.print(":");
+    Serial.println(serverPort);
+  } else {
+    Serial.println("WiFi verbinden mislukt. Probeert straks opnieuw.");
+  }
 }
 
-void sendToBackend(String eggId) {
+bool sendEggScan(String eggId) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Geen WiFi. Scan niet verzonden.");
+    return false;
+  }
+
   String path = "/api/scan";
-  String contentType = "application/json";
   String body = "{\"eggId\":\"" + eggId + "\"}";
 
-  Serial.println("Sending to local backend...");
+  Serial.println();
+  Serial.println("Scan verzenden naar backend...");
+  Serial.print("Egg ID: ");
+  Serial.println(eggId);
+  Serial.print("URL: http://");
+  Serial.print(serverAddress);
+  Serial.print(":");
+  Serial.print(serverPort);
+  Serial.println(path);
+  Serial.print("Body: ");
   Serial.println(body);
 
-  client.post(path, contentType, body);
+  client.beginRequest();
+  client.post(path);
+  client.sendHeader("Content-Type", "application/json");
+  client.sendHeader("Content-Length", body.length());
+  client.beginBody();
+  client.print(body);
+  client.endRequest();
 
   int statusCode = client.responseStatusCode();
   String response = client.responseBody();
 
-  Serial.print("Status: ");
+  Serial.print("Status code: ");
   Serial.println(statusCode);
 
   Serial.print("Response: ");
   Serial.println(response);
 
-  client.stop();
+  if (statusCode >= 200 && statusCode < 300) {
+    Serial.println("Scan succesvol verzonden!");
+    return true;
+  }
+
+  Serial.println("Scan verzenden mislukt.");
+  return false;
+}
+
+// =======================
+// SETUP
+// =======================
+
+void setup() {
+  Serial.begin(9600);
+
+  while (!Serial) {
+    delay(10);
+  }
+
+  Serial.println();
+  Serial.println("==============================");
+  Serial.println("Paaskonijn NFC Scanner gestart");
+  Serial.println("==============================");
+
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+  delay(500);
+
+  Serial.println("NFC reader klaar.");
+  Serial.println("Leg een ei/tag op de scanner...");
+
+  connectToWifi();
+}
+
+// =======================
+// LOOP
+// =======================
+
+void loop() {
+  // WiFi automatisch opnieuw verbinden als hotspot even wegvalt
+  if (millis() - lastWifiCheck > wifiCheckInterval) {
+    lastWifiCheck = millis();
+
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi verbinding kwijt.");
+      connectToWifi();
+    }
+  }
+
+  // Check of er een nieuwe NFC kaart is
+  if (!mfrc522.PICC_IsNewCardPresent()) {
+    return;
+  }
+
+  if (!mfrc522.PICC_ReadCardSerial()) {
+    return;
+  }
+
+  String uid = getUidString();
+  unsigned long now = millis();
+
+  Serial.println();
+  Serial.print("Tag gevonden: ");
+  Serial.println(uid);
+
+  // Voorkom spam van dezelfde tag
+  if (uid == lastUID && now - lastScanTime < sameTagCooldown) {
+    Serial.println("Zelfde tag te snel opnieuw gescand. Genegeerd.");
+    mfrc522.PICC_HaltA();
+    mfrc522.PCD_StopCrypto1();
+    return;
+  }
+
+  lastUID = uid;
+  lastScanTime = now;
+
+  sendEggScan(uid);
+
+  // Stop communicatie met huidige tag
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+
+  delay(300);
 }

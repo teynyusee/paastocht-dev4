@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
+const host = process.env.NEXT_PUBLIC_HOST ?? "localhost";
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["172.20.10.2"],
+  allowedDevOrigins: [host],
 };
 
 export default nextConfig;

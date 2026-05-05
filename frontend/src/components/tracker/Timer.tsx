@@ -86,7 +86,7 @@ export default function Timer({ duration, onTimeUp }: { duration: number, onTime
         />
       </svg>
 
-      <div className="timer-border__text">
+      <div className="timer-border__text text">
         {minutes}:{seconds.toString().padStart(2, "0")}
       </div>
     </div>

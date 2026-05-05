@@ -49,7 +49,7 @@ export default function VisualTextPlayer({ data, onComplete }: Props) {
 
   return (
     <div className="audio-player">
-      <p className="bg__eggs audio-player__subtitle">{currentText}</p>
+      <p className="audio-player__subtitle text">{currentText}</p>
     </div>
   );
 }

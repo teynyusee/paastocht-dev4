@@ -109,6 +109,17 @@ export default function BunnyFace() {
     await startGame();
   };
 
+const handleResetGame = async () => {
+  stopCurrentAudio();
+  setGameStarted(false);
+
+  try {
+    await resetGame();
+  } catch (error) {
+    console.warn("Reset mislukt:", error);
+  }
+};
+
   const playFaceAudio = useCallback(
     async (payload: FaceAudioPayload) => {
       if (!audioUnlockedRef.current) return;
@@ -334,11 +345,17 @@ export default function BunnyFace() {
     <main className="face-page">
       <video ref={videoRef} muted playsInline autoPlay className="face-video" />
 
+      <div className="face-buttons">
       {!gameStarted && (
         <button className="face-start-button" onClick={unlockAndStart}>
           Start spel + geluid
         </button>
       )}
+
+      <button className="face-reset-button" onClick={handleResetGame}>
+        Reset spel
+      </button>
+    </div>
 
       <section className="face">
         <BunnyEyes offset={eyeOffset} blink={blink} />

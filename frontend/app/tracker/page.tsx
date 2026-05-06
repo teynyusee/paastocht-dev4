@@ -130,8 +130,6 @@ export default function StartPage() {
         </svg>
       </div>
 
-      
-
     </div>
   );
 }

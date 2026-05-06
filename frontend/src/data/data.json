@@ -1,7 +1,7 @@
 {
   "settings": {
     "maxEggs": 4,
-    "timerDuration": 20
+    "timerDuration": 300
   },
 
   "intro": {

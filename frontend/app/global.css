@@ -37,6 +37,7 @@ body::-webkit-scrollbar {
 }
 
 .text {
-  font-size: 2rem;
+  font-size: 10rem;
   color: #680072;
+  text-align: center;
 }

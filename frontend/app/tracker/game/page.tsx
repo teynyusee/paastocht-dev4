@@ -32,17 +32,21 @@ export default function GamePage() {
     }, 1500);
   }, [router]);
 
+  const handleFakeEggFound = () => {
+    socket.emit("test:egg-found");
+  };
+
   useEffect(() => {
-  const handleReset = () => {
-    window.location.replace("/tracker");
-  };
+    const handleReset = () => {
+      window.location.replace("/tracker");
+    };
 
-  socket.on("tracker:reset", handleReset);
+    socket.on("tracker:reset", handleReset);
 
-  return () => {
-    socket.off("tracker:reset", handleReset);
-  };
-}, []);
+    return () => {
+      socket.off("tracker:reset", handleReset);
+    };
+  }, []);
 
   useEffect(() => {
     getGameState().then((state: GameState) => {
@@ -69,7 +73,14 @@ export default function GamePage() {
   return (
     <div className="bg__grass game-page">
       <Timer duration={scriptData.settings.timerDuration} onTimeUp={endGame} />
+
       <EggGrid count={eggs} max={maxEggs} />
+
+      <div className="test-egg-controls">
+        <button type="button" onClick={handleFakeEggFound}>
+          Test ei gevonden
+        </button>
+      </div>
     </div>
   );
 }

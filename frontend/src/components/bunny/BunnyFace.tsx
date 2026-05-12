@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
@@ -52,6 +54,8 @@ export type Offset = {
 
 type FaceAudioPayload = {
   src: string;
+  text?: string;
+  mouthMs?: number;
 };
 
 type SleepState = "sleeping" | "waking" | "awake";
@@ -213,84 +217,34 @@ export default function BunnyFace() {
     }
   }, [goToSleep, stopCurrentAudio]);
 
-  const playFaceAudio = useCallback(
-    async (payload: FaceAudioPayload) => {
-      if (!audioUnlockedRef.current) return;
 
-      stopCurrentAudio();
 
-      const audio = new Audio(payload.src);
-      audioRef.current = audio;
+const playFaceAudio = useCallback(
+  (payload: FaceAudioPayload) => {
+    stopCurrentAudio();
 
-      const AudioContextClass =
-        window.AudioContext || (window as any).webkitAudioContext;
+    const audio = new Audio(payload.src);
+    audioRef.current = audio;
 
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContextClass();
-      }
+    const shouldMoveMouth = Boolean(payload.mouthMs && payload.mouthMs > 0);
 
-      const audioContext = audioContextRef.current;
+    if (shouldMoveMouth) {
+      setIsTalking(true);
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
+      window.setTimeout(() => {
+        setIsTalking(false);
+      }, payload.mouthMs);
+    } else {
+      setIsTalking(false);
+    }
 
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.72;
-
-      const source = audioContext.createMediaElementSource(audio);
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-
-      sourceRef.current = source;
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      const animateMouth = () => {
-        analyser.getByteTimeDomainData(dataArray);
-
-        let sum = 0;
-
-        for (let i = 0; i < dataArray.length; i++) {
-          const value = (dataArray[i] - 128) / 128;
-          sum += value * value;
-        }
-
-        const rms = Math.sqrt(sum / dataArray.length);
-        const voiceActive = rms > 0.018;
-
-        if (voiceActive) {
-          silenceFramesRef.current = 0;
-          setIsTalking(true);
-        } else {
-          silenceFramesRef.current += 1;
-
-          if (silenceFramesRef.current > 8) {
-            setIsTalking(false);
-          }
-        }
-
-        mouthFrameRef.current = requestAnimationFrame(animateMouth);
-      };
-
-      audio.onended = () => {
-        stopCurrentAudio();
-      };
-
-      audio
-        .play()
-        .then(() => {
-          animateMouth();
-        })
-        .catch((error) => {
-          console.warn("Face audio failed:", error);
-          stopCurrentAudio();
-        });
-    },
-    [stopCurrentAudio],
-  );
+    audio.play().catch((error) => {
+      console.warn("Face audio kon niet afspelen:", error);
+      setIsTalking(false);
+    });
+  },
+  [stopCurrentAudio],
+);
 
   useEffect(() => {
     socket.connect();

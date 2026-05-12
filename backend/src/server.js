@@ -15,10 +15,29 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// =======================
+// GAME STATE
+// =======================
+
 let gameState = {
+  phase: "idle",
   totalEggs: 4,
   foundEggs: [],
 };
+
+const pendingEggs = new Set();
+
+// =======================
+// AUDIO SETTINGS
+// =======================
+
+const scanEffectAudio = {
+  src: "/audio/magical-spark.mp3",
+  text: "",
+  mouthMs: 0,
+};
+
+const scanEffectDelayMs = 2100;
 
 const scanAudios = [
   {
@@ -48,6 +67,109 @@ const scanAudios = [
   },
 ];
 
+// =======================
+// SHUFFLE BAG AUDIO
+// =======================
+
+let scanAudioBag = [];
+
+function refillScanAudioBag() {
+  scanAudioBag = [...scanAudios];
+
+  for (let i = scanAudioBag.length - 1; i > 0; i--) {
+    const randomIndex = Math.floor(Math.random() * (i + 1));
+
+    [scanAudioBag[i], scanAudioBag[randomIndex]] = [
+      scanAudioBag[randomIndex],
+      scanAudioBag[i],
+    ];
+  }
+}
+
+function getNextScanVoiceAudio() {
+  if (scanAudioBag.length === 0) {
+    refillScanAudioBag();
+  }
+
+  return scanAudioBag.pop();
+}
+
+function emitScanVoiceAudio() {
+  const audio = getNextScanVoiceAudio();
+
+  if (!audio) return;
+
+  io.emit("face:audio", audio);
+}
+
+// =======================
+// SHARED SCAN LOGIC
+// =======================
+
+function handleEggScan(eggId) {
+  if (!eggId || eggId === "unknown") {
+    return {
+      ok: false,
+      error: "Invalid eggId",
+      isNewEgg: false,
+      state: gameState,
+    };
+  }
+
+  const isAlreadyFound = gameState.foundEggs.includes(eggId);
+  const isAlreadyPending = pendingEggs.has(eggId);
+
+  if (isAlreadyFound || isAlreadyPending) {
+    io.emit("game:update", gameState);
+
+    return {
+      ok: true,
+      isNewEgg: false,
+      state: gameState,
+    };
+  }
+
+  if (gameState.foundEggs.length >= gameState.totalEggs) {
+    return {
+      ok: true,
+      isNewEgg: false,
+      state: gameState,
+    };
+  }
+
+  pendingEggs.add(eggId);
+
+  io.emit("face:audio", scanEffectAudio);
+
+  setTimeout(() => {
+    pendingEggs.delete(eggId);
+
+    const isStillNew = !gameState.foundEggs.includes(eggId);
+
+    if (!isStillNew) return;
+
+    gameState = {
+      ...gameState,
+      phase: "game",
+      foundEggs: [...gameState.foundEggs, eggId],
+    };
+    io.emit("game:update", gameState);
+
+    emitScanVoiceAudio();
+  }, scanEffectDelayMs);
+
+  return {
+    ok: true,
+    isNewEgg: true,
+    queued: true,
+    state: gameState,
+  };
+}
+
+// =======================
+// REST API
+// =======================
+
 app.get("/api/state", (req, res) => {
   res.json(gameState);
 });
@@ -58,6 +180,9 @@ app.post("/api/start", (req, res) => {
     totalEggs: 4,
     foundEggs: [],
   };
+
+  pendingEggs.clear();
+  scanAudioBag = [];
 
   io.emit("game:update", gameState);
   io.emit("tracker:start");
@@ -74,41 +199,43 @@ app.post("/api/start", (req, res) => {
 app.post("/api/scan", (req, res) => {
   const { eggId } = req.body;
 
-  console.log("Scanned:", eggId);
+  console.log("Real egg scanned:", eggId);
 
-  if (!eggId || eggId === "unknown") {
+  const result = handleEggScan(eggId);
+
+  if (!result.ok) {
     return res.status(400).json({
-      error: "Invalid eggId",
-      state: gameState,
+      error: result.error,
+      state: result.state,
     });
   }
 
-  const isNewEgg = !gameState.foundEggs.includes(eggId);
-
-  if (isNewEgg) {
-    gameState.foundEggs.push(eggId);
-  }
-
-  io.emit("game:update", gameState);
-
-  if (isNewEgg) {
-    const randomAudio =
-      scanAudios[Math.floor(Math.random() * scanAudios.length)];
-
-    io.emit("face:audio", randomAudio);
-  }
-
-  res.json(gameState);
+  res.json({
+    ok: true,
+    isNewEgg: result.isNewEgg,
+    queued: result.queued ?? false,
+    state: result.state,
+  });
 });
 
 app.post("/api/end", (req, res) => {
+  gameState = {
+    ...gameState,
+    phase: "end",
+  };
+
+  io.emit("game:update", gameState);
+
   io.emit("face:audio", {
     src: "/audio/eindboodschap.mp3",
     text: "Wauw! Het paasfeest is gered!",
     mouthMs: 13000,
   });
 
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    state: gameState,
+  });
 });
 
 app.post("/api/reset", (req, res) => {
@@ -118,6 +245,9 @@ app.post("/api/reset", (req, res) => {
     foundEggs: [],
   };
 
+  pendingEggs.clear();
+  scanAudioBag = [];
+
   io.emit("game:update", gameState);
   io.emit("face:idle");
   io.emit("tracker:reset");
@@ -125,15 +255,36 @@ app.post("/api/reset", (req, res) => {
   res.json(gameState);
 });
 
+// =======================
+// SOCKET.IO
+// =======================
+
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
   socket.emit("game:update", gameState);
 
+  socket.on("test:egg-found", () => {
+    if (gameState.foundEggs.length >= gameState.totalEggs) {
+      console.log("Test egg ignored: max eggs already found");
+      return;
+    }
+
+    const fakeEggId = `test-${Date.now()}`;
+
+    console.log("Test egg scanned:", fakeEggId);
+
+    handleEggScan(fakeEggId);
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
 });
+
+// =======================
+// START SERVER
+// =======================
 
 server.listen(5001, "0.0.0.0", () => {
   console.log("Local backend running on http://0.0.0.0:5001");

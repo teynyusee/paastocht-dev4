@@ -1,5 +1,5 @@
 /* =========================
-   RESET / PAGE
+   RESET / BASE
 ========================= */
 
 html,
@@ -14,92 +14,569 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+
+
 /* =========================
-   PAGE WRAPPER
+   PAGE
 ========================= */
 
 .face-page {
+  position: relative;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 12%,
+      rgba(243, 243, 245, 0.96) 0%,
+      rgba(233, 233, 237, 0.76) 34%,
+      rgba(255, 255, 255, 0) 68%
+    ),
+    linear-gradient(180deg, #ffffff 0%, #fcfcfc 68%, #fffefb 100%);
 }
 
 /* hidden camera */
 .face-video {
   position: fixed;
-  width: 1px;
-  height: 1px;
+  left: -9999px;
+  top: -9999px;
+  width: 640px;
+  height: 480px;
   opacity: 0;
   pointer-events: none;
 }
 
 /* =========================
-   FACE CONTAINER
+   TOP RIGHT HOVER CONTROLS
+========================= */
+
+.face-buttons {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+
+  width: 260px;
+  height: 150px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+
+  padding: 22px;
+  box-sizing: border-box;
+
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: auto;
+
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+/* invisible hover zone */
+.face-buttons::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+/* show buttons only when hovering top-right zone */
+.face-buttons:hover {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.face-start-button,
+.face-reset-button {
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+
+  box-shadow: 0 10px 24px rgba(104, 0, 114, 0.16);
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.face-start-button:hover,
+.face-reset-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(104, 0, 114, 0.2);
+}
+
+.face-start-button {
+  border: none;
+  background: linear-gradient(180deg, #9b22a6 0%, #830f8f 55%, #680072 100%);
+  color: #ffffff;
+}
+
+.face-reset-button {
+  background: #ffffff;
+  color: #680072;
+  border: 2px solid #680072;
+}
+
+/* =========================
+   FACE
 ========================= */
 
 .face {
   position: relative;
-  transform: scale(2.2);
+  width: 100vw;
+  height: 100vh;
+  user-select: none;
+}
+
+/* big soft grey-white head */
+.face::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -25vh;
+  width: 96vw;
+  height: 84vh;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(239, 239, 242, 0.97) 0%,
+    rgba(229, 229, 233, 0.76) 52%,
+    rgba(239, 239, 242, 0) 77%
+  );
+  border-radius: 0 0 50% 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* big cream muzzle */
+.face::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -31vh;
+  width: 88vw;
+  height: 61vh;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #fffefa 0%, #f5f3ee 100%);
+  border-radius: 56% 56% 0 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* =========================
+   BROWS
+   smooth expressive eyebrows
+========================= */
+
+.face-brows-row {
+  position: absolute;
+  top: 23.2vh;
+  left: 50%;
+  z-index: 7;
+
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 24vw;
+
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.face-brow {
+  position: relative;
+
+  width: 9.5vw;
+  min-width: 116px;
+  max-width: 158px;
+  height: 16px;
+
+  background: linear-gradient(180deg, #c9c9cf 0%, #aaaab4 100%);
+  border-radius: 999px;
+  opacity: 0.86;
+
+  box-shadow:
+    0 8px 14px rgba(80, 80, 90, 0.06),
+    inset 0 -2px 3px rgba(90, 90, 100, 0.08);
+
+  will-change: transform;
+
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    width 220ms ease;
+}
+
+/* kleine zachte highlight op de wenkbrauw */
+.face-brow::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  top: 3px;
+
+  width: 54%;
+  height: 3px;
+
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+/* left brow follows MediaPipe vertical movement */
+.face-brow--left {
+  transform:
+    translate(
+      calc(var(--brow-x, 0px) * -0.4),
+      var(--brow-y, 0px)
+    )
+    rotate(calc(-6deg + var(--brow-tilt, 0deg)));
+}
+
+/* right brow follows MediaPipe vertical movement */
+.face-brow--right {
+  transform:
+    translate(
+      calc(var(--brow-x, 0px) * -0.4),
+      var(--brow-y, 0px)
+    )
+    rotate(calc(6deg - var(--brow-tilt, 0deg)));
+}
+
+/* awake: tiny breathing movement so it feels alive */
+.face-page.is-awake .face-brow--left {
+  animation: browAliveLeft 3600ms ease-in-out infinite;
+}
+
+.face-page.is-awake .face-brow--right {
+  animation: browAliveRight 3600ms ease-in-out infinite;
+}
+
+/* sleeping: relaxed, lower, flatter */
+.face-page.is-sleeping .face-brow--left,
+.face-page.is-sleeping .face-brow--right {
+  opacity: 0.42;
+  animation: none;
+  transform: translateY(16px) rotate(0deg);
+}
+
+/* waking: cute eyebrow pop */
+.face-page.is-waking .face-brow--left {
+  animation: browWakeLeft 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.face-page.is-waking .face-brow--right {
+  animation: browWakeRight 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* blink: brows move slightly down with eyelids */
+.face-page.is-awake .face-eyes-row.is-blinking ~ .face-brows-row {
+  transform: translateX(-50%) translateY(4px);
+}
+
+@keyframes browAliveLeft {
+  0% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        var(--brow-y, 0px)
+      )
+      rotate(calc(-6deg + var(--brow-tilt, 0deg)));
+  }
+
+  50% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        calc(var(--brow-y, 0px) - 5px)
+      )
+      rotate(calc(-7deg + var(--brow-tilt, 0deg)));
+  }
+
+  100% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        var(--brow-y, 0px)
+      )
+      rotate(calc(-6deg + var(--brow-tilt, 0deg)));
+  }
+}
+
+@keyframes browAliveRight {
+  0% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        var(--brow-y, 0px)
+      )
+      rotate(calc(6deg - var(--brow-tilt, 0deg)));
+  }
+
+  50% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        calc(var(--brow-y, 0px) - 5px)
+      )
+      rotate(calc(7deg - var(--brow-tilt, 0deg)));
+  }
+
+  100% {
+    transform:
+      translate(
+        calc(var(--brow-x, 0px) * -0.4),
+        var(--brow-y, 0px)
+      )
+      rotate(calc(6deg - var(--brow-tilt, 0deg)));
+  }
+}
+
+@keyframes browWakeLeft {
+  0% {
+    opacity: 0.42;
+    transform: translateY(16px) rotate(0deg);
+  }
+
+  45% {
+    opacity: 0.42;
+    transform: translateY(16px) rotate(0deg);
+  }
+
+  72% {
+    opacity: 0.9;
+    transform: translateY(-12px) rotate(-9deg);
+  }
+
+  88% {
+    transform: translateY(3px) rotate(-4deg);
+  }
+
+  100% {
+    opacity: 0.86;
+    transform: translateY(0) rotate(-6deg);
+  }
+}
+
+@keyframes browWakeRight {
+  0% {
+    opacity: 0.42;
+    transform: translateY(16px) rotate(0deg);
+  }
+
+  45% {
+    opacity: 0.42;
+    transform: translateY(16px) rotate(0deg);
+  }
+
+  72% {
+    opacity: 0.9;
+    transform: translateY(-12px) rotate(9deg);
+  }
+
+  88% {
+    transform: translateY(3px) rotate(4deg);
+  }
+
+  100% {
+    opacity: 0.86;
+    transform: translateY(0) rotate(6deg);
+  }
 }
 
 /* =========================
    EYES
+   real pupils + eyelids
 ========================= */
 
 .face-eyes-row {
-  display: flex;
-  gap: 90px;
-  margin-bottom: 28px;
-}
+  position: absolute;
+  top: 31vh;
+  left: 50%;
+  z-index: 5;
 
-.face-eye-white {
-  width: 130px;
-  height: 130px;
-  background: #fff;
-  border: 8px solid #000;
-  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  gap: 17vw;
+
+  transform: translateX(-50%);
 }
 
-.face-pupil {
+.face-eye {
   position: relative;
-  width: 56px;
-  height: 56px;
-  background: #000;
+  width: 18vw;
+  height: 19.5vw;
+  min-width: 210px;
+  min-height: 232px;
+  max-width: 280px;
+  max-height: 305px;
+}
+
+/* main eye stays round */
+.face-eye-white {
+  position: absolute;
+  inset: 0;
+
+  background: radial-gradient(
+    circle at 42% 35%,
+    #ffffff 0%,
+    #ffffff 45%,
+    #f5f5f1 100%
+  );
+
+  border: 10px solid #565661;
+  border-radius: 52% 52% 48% 48%;
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 34px rgba(80, 80, 90, 0.08),
+    inset 0 -12px 16px rgba(241, 237, 229, 0.22);
+
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease,
+    border-color 260ms ease,
+    background 260ms ease,
+    box-shadow 260ms ease;
+}
+
+/* small lash accents */
+.face-eye-white::after {
+  content: "";
+  position: absolute;
+  top: 47%;
+  width: 26px;
+  height: 10px;
+  background: #565661;
   border-radius: 999px;
+  z-index: 8;
+  opacity: 0.68;
+}
+
+.face-eye:first-child .face-eye-white::after {
+  left: -7px;
+  transform: rotate(-12deg);
+}
+
+.face-eye:last-child .face-eye-white::after {
+  right: -7px;
+  transform: rotate(12deg);
+}
+
+.face-eye-inner-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 16px rgba(90, 90, 100, 0.05),
+    inset 0 -14px 24px rgba(241, 238, 230, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* separate pupil */
+.face-pupil {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+
+  width: 7.8vw;
+  height: 8.7vw;
+  min-width: 92px;
+  min-height: 102px;
+  max-width: 124px;
+  max-height: 140px;
+
+  border-radius: 54% 54% 50% 50%;
+  z-index: 3;
+
+  background:
+    radial-gradient(circle at 30% 24%, #ffffff 0%, #ffffff 13%, transparent 14%),
+    radial-gradient(
+      circle at 72% 48%,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.9) 5%,
+      transparent 6%
+    ),
+    linear-gradient(180deg, #0f1c33 0%, #144372 42%, #58a8ff 100%);
+
   will-change: transform;
-  transition: transform 0.08s linear;
+  transition:
+    transform 0.07s linear,
+    opacity 160ms ease;
+
+  box-shadow:
+    inset 0 -15px 18px rgba(85, 169, 255, 0.56),
+    inset 0 8px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* eyelids are separate layers */
+.face-eyelid {
+  position: absolute;
+  left: -4%;
+  width: 108%;
+  height: 58%;
+  z-index: 6;
+
+  background: linear-gradient(180deg, #eeeeef 0%, #e2e2e5 100%);
+  pointer-events: none;
+
+  transition:
+    transform 150ms ease-in-out,
+    opacity 150ms ease-in-out;
+}
+
+.face-eyelid--top {
+  top: -2%;
+  border-radius: 52% 52% 38% 38%;
+  transform: translateY(-105%);
+  box-shadow: inset 0 -8px 14px rgba(120, 120, 130, 0.08);
+}
+
+.face-eyelid--bottom {
+  bottom: -2%;
+  border-radius: 38% 38% 52% 52%;
+  transform: translateY(105%);
+  box-shadow: inset 0 8px 14px rgba(120, 120, 130, 0.06);
+}
+
+/* sleeping closed arc */
+.face-sleep-line {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 165px;
+  height: 62px;
+  transform: translateX(-50%);
+
+  border-bottom: 8px solid rgba(88, 88, 98, 0.78);
+  border-radius: 0 0 999px 999px;
+  opacity: 0;
+  z-index: 8;
+
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .face-shine {
-  position: absolute;
-  border-radius: 999px;
-  background: #fff;
+  display: none;
 }
 
-.face-shine--big {
-  top: 10px;
-  left: 12px;
-  width: 18px;
-  height: 18px;
-}
-
-.face-shine--small {
-  top: 30px;
-  left: 34px;
-  width: 9px;
-  height: 9px;
-  background: rgba(255, 255, 255, 0.7);
+.face-eyes-row.is-blinking .face-pupil {
+  opacity: 0.12;
 }
 
 /* =========================
@@ -107,11 +584,24 @@ body::-webkit-scrollbar {
 ========================= */
 
 .face-nose {
-  width: 24px;
-  height: 16px;
-  background: #f472b6;
-  border-radius: 999px;
-  margin-bottom: 10px;
+  position: absolute;
+  top: 61vh;
+  left: 50%;
+  z-index: 6;
+
+  width: 90px;
+  height: 56px;
+  transform: translateX(-50%);
+
+  background:
+    radial-gradient(circle at 44% 30%, rgba(255, 255, 255, 0.44) 0%, transparent 34%),
+    linear-gradient(180deg, #ff9bb5 0%, #ef7397 100%);
+
+  border-radius: 48% 48% 58% 58%;
+  clip-path: polygon(50% 98%, 8% 32%, 20% 10%, 80% 10%, 92% 32%);
+  box-shadow:
+    0 6px 10px rgba(150, 60, 90, 0.1),
+    inset 0 -8px 12px rgba(160, 52, 82, 0.12);
 }
 
 /* =========================
@@ -120,100 +610,524 @@ body::-webkit-scrollbar {
 
 .face-cheek {
   position: absolute;
-  top: 120px;
-  width: 42px;
-  height: 24px;
-  background: #fbcfe8;
+  top: 62.2vh;
+  z-index: 4;
+
+  width: 150px;
+  height: 70px;
   border-radius: 999px;
+  opacity: 0.88;
+
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 135, 163, 0.58) 0%,
+    rgba(255, 173, 191, 0.36) 60%,
+    rgba(255, 193, 206, 0.05) 100%
+  );
+
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
 }
 
 .face-cheek--left {
-  left: -100px;
+  left: 20vw;
+  transform: rotate(13deg);
 }
 
 .face-cheek--right {
-  right: -100px;
+  right: 20vw;
+  transform: rotate(-13deg);
 }
 
 /* =========================
-   START BUTTON
-========================= */
-
-.face-buttons {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  z-index: 50;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.face-start-button,
-.face-reset-button {
-  border: none;
-  border-radius: 999px;
-  padding: 14px 22px;
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-}
-
-.face-start-button {
-  background: #680072;
-  color: white;
-}
-
-.face-reset-button {
-  background: white;
-  color: #680072;
-  border: 2px solid #680072;
-}
-/* =========================
-   TALKING MOUTH (CLEAN)
+   MOUTH
 ========================= */
 
 .face-mouth-wrapper {
-  width: 120px;
-  height: 70px;
-  margin-top: 14px;
+  position: absolute;
+  top: 68.2vh;
+  left: 50%;
+  z-index: 6;
+
+  width: 280px;
+  height: 180px;
+
   display: flex;
   align-items: flex-start;
   justify-content: center;
+
+  transform: translateX(-50%);
 }
 
-/* idle (smile) */
-.talk-mouth {
-  width: 78px;
-  height: 28px;
-  border: 6px solid #000;
-  border-top: 0;
-  border-radius: 0 0 999px 999px;
+.face-mouth {
+  position: relative;
+  width: 220px;
+  height: 140px;
+}
+
+.face-mouth-shell {
+  position: absolute;
+  left: 50%;
+  top: 56px;
+  transform: translateX(-50%);
+  overflow: hidden;
+
+  background: linear-gradient(180deg, #6a1325 0%, #96233f 100%);
+  box-shadow:
+    inset 0 8px 14px rgba(0, 0, 0, 0.18),
+    0 6px 12px rgba(100, 40, 50, 0.07);
+
+  transition:
+    width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease;
+}
+
+.face-mouth-tooth {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+
+  width: 30px;
+  height: 26px;
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  transition:
+    width 220ms ease,
+    height 220ms ease,
+    opacity 200ms ease;
+}
+
+.face-mouth-tongue {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  z-index: 1;
+
+  width: 44px;
+  height: 16px;
+  background: #f47d9c;
+  border-radius: 999px 999px 26px 26px;
+
+  transition:
+    width 240ms ease,
+    height 240ms ease,
+    opacity 200ms ease;
+}
+
+/* sleeping mouth */
+.face-mouth.is-sleeping .face-mouth-shell {
+  width: 88px;
+  height: 30px;
+  top: 58px;
   background: transparent;
-  transition: all 0.2s ease;
+  box-shadow: none;
+  border-radius: 0;
+  border-bottom: 8px solid rgba(156, 98, 111, 0.78);
 }
 
-/* talking state */
-.talk-mouth.is-talking {
+.face-mouth.is-sleeping .face-mouth-tooth,
+.face-mouth.is-sleeping .face-mouth-tongue {
+  opacity: 0;
+}
+
+/* waking mouth */
+.face-mouth.is-waking .face-mouth-shell {
+  width: 62px;
+  height: 22px;
+  top: 64px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(180deg, #6a1325 0%, #96233f 100%);
+  box-shadow:
+    inset 0 8px 14px rgba(0, 0, 0, 0.18),
+    0 6px 12px rgba(100, 40, 50, 0.06);
+}
+
+.face-mouth.is-waking .face-mouth-tooth {
+  width: 24px;
+  height: 20px;
+  opacity: 1;
+}
+
+.face-mouth.is-waking .face-mouth-tongue {
+  width: 32px;
+  height: 12px;
+  opacity: 0.76;
+}
+
+/* awake idle mouth */
+.face-mouth.is-awake .face-mouth-shell {
+  width: 82px;
+  height: 36px;
+  top: 58px;
+  border-radius: 0 0 999px 999px;
+}
+
+.face-mouth.is-awake .face-mouth-tooth {
+  width: 28px;
+  height: 22px;
+  opacity: 1;
+}
+
+.face-mouth.is-awake .face-mouth-tongue {
+  width: 38px;
+  height: 14px;
+  opacity: 0.88;
+}
+
+/* talking */
+.face-mouth.is-awake.is-talking .face-mouth-shell {
+  width: 98px;
+  height: 84px;
+  top: 44px;
+  border-radius: 20px 20px 999px 999px;
+  animation: mouthBob 180ms ease-in-out infinite alternate;
+}
+
+.face-mouth.is-awake.is-talking .face-mouth-tooth {
+  width: 30px;
+  height: 28px;
+}
+
+.face-mouth.is-awake.is-talking .face-mouth-tongue {
   width: 58px;
-  height: 42px;
-  border: none;
-  border-radius: 999px;
-  background: #000;
-
-  animation: bunnyTalk 0.18s infinite alternate ease-in-out;
+  height: 32px;
+  opacity: 1;
 }
 
-/* animation */
-@keyframes bunnyTalk {
+@keyframes mouthBob {
   from {
-    height: 16px;
-    transform: scaleX(1.25);
+    transform: translateX(-50%) scaleX(1) scaleY(0.97);
   }
 
   to {
-    height: 48px;
-    transform: scaleX(0.9);
+    transform: translateX(-50%) scaleX(0.97) scaleY(1.03);
+  }
+}
+
+/* =========================
+   EYE STATE ANIMATIONS
+========================= */
+
+/* sleeping: eyelids closed, pupil hidden, sleep arc visible */
+.face-page.is-sleeping .face-eye-white {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.face-page.is-sleeping .face-eye-inner-shadow {
+  opacity: 0;
+}
+
+.face-page.is-sleeping .face-pupil {
+  opacity: 0;
+}
+
+.face-page.is-sleeping .face-eyelid--top {
+  transform: translateY(0%);
+}
+
+.face-page.is-sleeping .face-eyelid--bottom {
+  transform: translateY(0%);
+}
+
+.face-page.is-sleeping .face-sleep-line {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* waking: eye shape appears and eyelids open */
+.face-page.is-waking .face-eye-white {
+  animation: eyeWakeShape 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.face-page.is-waking .face-eyelid--top {
+  animation: topLidWake 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.face-page.is-waking .face-eyelid--bottom {
+  animation: bottomLidWake 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.face-page.is-waking .face-sleep-line {
+  animation: sleepLineOut 360ms ease forwards;
+}
+
+.face-page.is-waking .face-pupil {
+  animation: pupilWakeIn 1150ms ease forwards;
+}
+
+/* awake: eyelids fully open */
+.face-page.is-awake .face-eyelid--top {
+  transform: translateY(-105%);
+}
+
+.face-page.is-awake .face-eyelid--bottom {
+  transform: translateY(105%);
+}
+
+.face-page.is-awake .face-sleep-line {
+  opacity: 0;
+}
+
+.face-page.is-awake .face-pupil {
+  opacity: 1;
+}
+
+/* brows states */
+.face-page.is-sleeping .face-brow--left,
+.face-page.is-sleeping .face-brow--right {
+  opacity: 0.45;
+  transform: translateY(8px) rotate(0deg);
+}
+
+.face-page.is-waking .face-brow {
+  animation: wakeBrows 1150ms ease forwards;
+}
+
+/* full face sleep / wake motion */
+.face-page.is-sleeping .face {
+  animation: bunnySleepFloat 3000ms ease-in-out infinite;
+}
+
+.face-page.is-waking .face {
+  animation: bunnyWakeUp 1150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.face-page.is-sleeping .face-cheek {
+  opacity: 0.72;
+}
+
+.face-page.is-sleeping .face-nose {
+  animation: sleepyNoseBreath 1800ms ease-in-out infinite alternate;
+}
+
+/* =========================
+   BLINK FIX
+   must be after is-awake rules
+========================= */
+
+.face-page.is-awake .face-eyes-row.is-blinking .face-eyelid--top {
+  transform: translateY(0%);
+}
+
+.face-page.is-awake .face-eyes-row.is-blinking .face-eyelid--bottom {
+  transform: translateY(0%);
+}
+
+.face-page.is-awake .face-eyes-row.is-blinking .face-pupil {
+  opacity: 0.12;
+}
+
+/* =========================
+   KEYFRAMES
+========================= */
+
+@keyframes eyeWakeShape {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scaleY(0.96);
+  }
+
+  68% {
+    opacity: 1;
+    transform: scaleY(1.06);
+  }
+
+  84% {
+    transform: scaleY(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes topLidWake {
+  0% {
+    transform: translateY(0%);
+  }
+
+  35% {
+    transform: translateY(0%);
+  }
+
+  70% {
+    transform: translateY(-112%);
+  }
+
+  86% {
+    transform: translateY(-94%);
+  }
+
+  100% {
+    transform: translateY(-105%);
+  }
+}
+
+@keyframes bottomLidWake {
+  0% {
+    transform: translateY(0%);
+  }
+
+  35% {
+    transform: translateY(0%);
+  }
+
+  70% {
+    transform: translateY(112%);
+  }
+
+  86% {
+    transform: translateY(94%);
+  }
+
+  100% {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes sleepLineOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+}
+
+@keyframes pupilWakeIn {
+  0% {
+    opacity: 0;
+  }
+
+  45% {
+    opacity: 0;
+  }
+
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes wakeBrows {
+  0% {
+    opacity: 0.45;
+    transform: translateY(8px) rotate(0deg);
+  }
+
+  70% {
+    opacity: 0.9;
+    transform: translateY(-5px) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes bunnySleepFloat {
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(8px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes bunnyWakeUp {
+  0% {
+    transform: translateY(8px) scale(1);
+  }
+
+  40% {
+    transform: translateY(8px) scale(1);
+  }
+
+  72% {
+    transform: translateY(-14px) scale(1.018);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sleepyNoseBreath {
+  from {
+    transform: translateX(-50%) scale(1);
+  }
+
+  to {
+    transform: translateX(-50%) scale(1.04);
+  }
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1200px) {
+  .face-eyes-row {
+    gap: 13vw;
+  }
+
+  .face-cheek--left {
+    left: 16vw;
+  }
+
+  .face-cheek--right {
+    right: 16vw;
+  }
+}
+
+@media (max-width: 900px) {
+  .face-start-button,
+  .face-reset-button {
+    padding: 11px 15px;
+    font-size: 14px;
+  }
+
+  .sound-wake-chip {
+    font-size: 12px;
+    padding: 9px 13px;
+  }
+
+  .face-brows-row {
+    gap: 20vw;
+  }
+
+  .face-cheek {
+    width: 110px;
+    height: 54px;
   }
 }

@@ -6,7 +6,6 @@
 // =======================
 // NFC READER PINS
 // =======================
-// Voor MFRC522:
 // SDA / SS  -> D10
 // SCK       -> D13
 // MOSI      -> D11
@@ -21,6 +20,12 @@
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 // =======================
+// LED PIN
+// =======================
+
+#define LED_PIN 7
+
+// =======================
 // WIFI SETTINGS
 // =======================
 
@@ -32,11 +37,9 @@ const char* password = "teynur233";
 // =======================
 
 // const char* serverAddress = "172.20.10.4";
-
 const char* serverAddress = "paaskonijn.local";
 const int serverPort = 5001;
 
-// Geen SSL, gewoon lokaal HTTP
 WiFiClient wifi;
 HttpClient client(wifi, serverAddress, serverPort);
 
@@ -46,14 +49,38 @@ HttpClient client(wifi, serverAddress, serverPort);
 
 String lastUID = "";
 unsigned long lastScanTime = 0;
-
-// Zelfde tag mag pas opnieuw na 2 seconden verstuurd worden.
-// Andere tags mogen direct.
 const unsigned long sameTagCooldown = 2000;
 
-// WiFi reconnect check
 unsigned long lastWifiCheck = 0;
 const unsigned long wifiCheckInterval = 5000;
+
+// =======================
+// LED HELPERS
+// =======================
+
+void ledOn() {
+  digitalWrite(LED_PIN, HIGH);
+}
+
+void ledOff() {
+  digitalWrite(LED_PIN, LOW);
+}
+
+void blinkLedOnce() {
+  Serial.println("LED KNIPPER");
+  ledOn();
+  delay(1000);
+  ledOff();
+}
+
+void startupLedTest() {
+  for (int i = 0; i < 3; i++) {
+    ledOn();
+    delay(200);
+    ledOff();
+    delay(200);
+  }
+}
 
 // =======================
 // HELPERS
@@ -167,10 +194,16 @@ void setup() {
     delay(10);
   }
 
+  pinMode(LED_PIN, OUTPUT);
+  ledOff();
+
   Serial.println();
   Serial.println("==============================");
   Serial.println("Paaskonijn NFC Scanner gestart");
   Serial.println("==============================");
+
+  // Test: LED moet hier 3 keer knipperen bij opstart
+  startupLedTest();
 
   SPI.begin();
   mfrc522.PCD_Init();
@@ -188,7 +221,6 @@ void setup() {
 // =======================
 
 void loop() {
-  // WiFi automatisch opnieuw verbinden als hotspot even wegvalt
   if (millis() - lastWifiCheck > wifiCheckInterval) {
     lastWifiCheck = millis();
 
@@ -198,7 +230,6 @@ void loop() {
     }
   }
 
-  // Check of er een nieuwe NFC kaart is
   if (!mfrc522.PICC_IsNewCardPresent()) {
     return;
   }
@@ -214,9 +245,9 @@ void loop() {
   Serial.print("Tag gevonden: ");
   Serial.println(uid);
 
-  // Voorkom spam van dezelfde tag
   if (uid == lastUID && now - lastScanTime < sameTagCooldown) {
     Serial.println("Zelfde tag te snel opnieuw gescand. Genegeerd.");
+
     mfrc522.PICC_HaltA();
     mfrc522.PCD_StopCrypto1();
     return;
@@ -225,9 +256,12 @@ void loop() {
   lastUID = uid;
   lastScanTime = now;
 
+  // BELANGRIJK: LED brandt meteen na scan, dus niet wachten op backend
+  blinkLedOnce();
+
+  // Daarna pas naar backend sturen
   sendEggScan(uid);
 
-  // Stop communicatie met huidige tag
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 

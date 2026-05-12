@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Offset } from "./BunnyFace";
 
 type BunnyEyesProps = {
@@ -6,34 +7,31 @@ type BunnyEyesProps = {
 };
 
 export default function BunnyEyes({ offset, blink }: BunnyEyesProps) {
-  return (
-    <div className="face-eyes-row">
-      <Eye offset={offset} blink={blink} />
-      <Eye offset={offset} blink={blink} />
-    </div>
-  );
-}
+  const pupilStyle: CSSProperties = {
+    transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+  };
 
-function Eye({ offset, blink }: BunnyEyesProps) {
   return (
-    <div
-      className="face-eye-white"
-      style={{
-        height: blink ? 12 : 130,
-        transition: "height 120ms ease",
-      }}
-    >
-      {!blink && (
-        <div
-          className="face-pupil"
-          style={{
-            transform: `translate3d(${offset.x}px, ${offset.y}px, 0)`,
-          }}
-        >
-          <div className="face-shine face-shine--big" />
-          <div className="face-shine face-shine--small" />
+    <div className={`face-eyes-row ${blink ? "is-blinking" : ""}`}>
+      <div className="face-eye">
+        <div className="face-eye-white">
+          <div className="face-pupil" style={pupilStyle} />
+          <div className="face-eyelid face-eyelid--top" />
+          <div className="face-eyelid face-eyelid--bottom" />
         </div>
-      )}
+
+        <div className="face-sleep-line" />
+      </div>
+
+      <div className="face-eye">
+        <div className="face-eye-white">
+          <div className="face-pupil" style={pupilStyle} />
+          <div className="face-eyelid face-eyelid--top" />
+          <div className="face-eyelid face-eyelid--bottom" />
+        </div>
+
+        <div className="face-sleep-line" />
+      </div>
     </div>
   );
 }

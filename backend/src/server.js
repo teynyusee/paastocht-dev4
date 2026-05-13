@@ -25,6 +25,8 @@ let gameState = {
   foundEggs: [],
 };
 
+// Eieren die al gescand zijn, maar nog wachten tot de whoosh klaar is.
+// Dit voorkomt dubbele scans tijdens de delay.
 const pendingEggs = new Set();
 
 // =======================
@@ -37,7 +39,9 @@ const scanEffectAudio = {
   mouthMs: 0,
 };
 
-const scanEffectDelayMs = 2100;
+// magical-spark duurt ongeveer 2 seconden.
+// 2200ms zorgt dat hij volledig kan uitspelen.
+const scanEffectDelayMs = 2200;
 
 const scanAudios = [
   {
@@ -69,6 +73,9 @@ const scanAudios = [
 
 // =======================
 // SHUFFLE BAG AUDIO
+// Hierdoor krijg je niet 3 keer hetzelfde geluid na elkaar.
+// Eerst worden alle scan-audio's 1 keer gebruikt in random volgorde.
+// Daarna begint een nieuwe random volgorde.
 // =======================
 
 let scanAudioBag = [];
@@ -104,6 +111,9 @@ function emitScanVoiceAudio() {
 
 // =======================
 // SHARED SCAN LOGIC
+// Deze functie wordt gebruikt door:
+// - echte Arduino scan via POST /api/scan
+// - testknop via socket test:egg-found
 // =======================
 
 function handleEggScan(eggId) {
@@ -112,6 +122,7 @@ function handleEggScan(eggId) {
       ok: false,
       error: "Invalid eggId",
       isNewEgg: false,
+      queued: false,
       state: gameState,
     };
   }
@@ -125,6 +136,7 @@ function handleEggScan(eggId) {
     return {
       ok: true,
       isNewEgg: false,
+      queued: false,
       state: gameState,
     };
   }
@@ -133,28 +145,29 @@ function handleEggScan(eggId) {
     return {
       ok: true,
       isNewEgg: false,
+      queued: false,
       state: gameState,
     };
   }
 
   pendingEggs.add(eggId);
 
+  // 1. Ei meteen toevoegen
+  gameState = {
+    ...gameState,
+    phase: "game",
+    foundEggs: [...gameState.foundEggs, eggId],
+  };
+
+  // 2. Tracker/iPad meteen updaten, dus ei verschijnt direct
+  io.emit("game:update", gameState);
+
+  // 3. Whoosh speelt tegelijk met het verschijnen van het ei
   io.emit("face:audio", scanEffectAudio);
 
+  // 4. Na de volledige whoosh pas random stemgeluid
   setTimeout(() => {
     pendingEggs.delete(eggId);
-
-    const isStillNew = !gameState.foundEggs.includes(eggId);
-
-    if (!isStillNew) return;
-
-    gameState = {
-      ...gameState,
-      phase: "game",
-      foundEggs: [...gameState.foundEggs, eggId],
-    };
-    io.emit("game:update", gameState);
-
     emitScanVoiceAudio();
   }, scanEffectDelayMs);
 
@@ -213,7 +226,7 @@ app.post("/api/scan", (req, res) => {
   res.json({
     ok: true,
     isNewEgg: result.isNewEgg,
-    queued: result.queued ?? false,
+    queued: result.queued,
     state: result.state,
   });
 });
@@ -264,6 +277,9 @@ io.on("connection", (socket) => {
 
   socket.emit("game:update", gameState);
 
+  // Testknop op tracker.
+  // Werkt exact zoals een echte Arduino scan:
+  // whoosh -> wachten -> ei toevoegen -> tracker update -> random stem
   socket.on("test:egg-found", () => {
     if (gameState.foundEggs.length >= gameState.totalEggs) {
       console.log("Test egg ignored: max eggs already found");

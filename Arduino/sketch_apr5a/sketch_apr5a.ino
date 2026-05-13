@@ -6,13 +6,6 @@
 // =======================
 // NFC READER PINS
 // =======================
-// SDA / SS  -> D10
-// SCK       -> D13
-// MOSI      -> D11
-// MISO      -> D12
-// RST       -> D9
-// 3.3V      -> 3.3V
-// GND       -> GND
 
 #define SS_PIN 10
 #define RST_PIN 9
@@ -22,8 +15,9 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 // =======================
 // LED PIN
 // =======================
+// LED(s) aansluiten op D6
 
-#define LED_PIN 7
+#define LED_PIN 6
 
 // =======================
 // WIFI SETTINGS
@@ -36,8 +30,8 @@ const char* password = "teynur233";
 // RASPBERRY PI BACKEND
 // =======================
 
-// const char* serverAddress = "172.20.10.4";
-const char* serverAddress = "paaskonijn.local";
+const char* serverAddress = "172.20.10.4";
+// const char* serverAddress = "paaskonijn.local";
 const int serverPort = 5001;
 
 WiFiClient wifi;
@@ -49,37 +43,214 @@ HttpClient client(wifi, serverAddress, serverPort);
 
 String lastUID = "";
 unsigned long lastScanTime = 0;
-const unsigned long sameTagCooldown = 2000;
+
+// Was 2000ms. Dat voelde traag.
+// 700ms blokkeert hetzelfde ei nog tegen spam,
+// maar scans voelen veel sneller.
+const unsigned long sameTagCooldown = 700;
 
 unsigned long lastWifiCheck = 0;
 const unsigned long wifiCheckInterval = 5000;
 
 // =======================
+// SMOOTH LED SETTINGS
+// =======================
+
+int brightness = 0;
+int fadeDirection = 1;
+
+const int minBrightness = 0;
+const int maxBrightness = 255;
+const int fadeStep = 3;
+
+unsigned long lastFadeTime = 0;
+const unsigned long fadeInterval = 15;
+
+// =======================
+// NON-BLOCKING SCAN LED EFFECT
+// =======================
+
+enum LedMode {
+  LED_IDLE,
+  LED_SCAN_WAIT,
+  LED_SCAN_FLASH_ON,
+  LED_SCAN_FLASH_OFF,
+  LED_SCAN_HOLD,
+  LED_SCAN_FADE_OUT
+};
+
+LedMode ledMode = LED_IDLE;
+
+unsigned long ledModeStartedAt = 0;
+unsigned long lastScanLedStep = 0;
+
+int scanFlashCount = 0;
+
+const unsigned long scanWaitMs = 120;
+const unsigned long flashOnMs = 90;
+const unsigned long flashOffMs = 70;
+const int maxScanFlashes = 4;
+const unsigned long scanHoldMs = 1200;
+
+// =======================
 // LED HELPERS
 // =======================
 
-void ledOn() {
-  digitalWrite(LED_PIN, HIGH);
+void setLed(int value) {
+  value = constrain(value, 0, 255);
+  analogWrite(LED_PIN, value);
 }
 
-void ledOff() {
-  digitalWrite(LED_PIN, LOW);
+void updateSmoothIdleLed() {
+  if (ledMode != LED_IDLE) {
+    return;
+  }
+
+  unsigned long now = millis();
+
+  if (now - lastFadeTime >= fadeInterval) {
+    lastFadeTime = now;
+
+    brightness += fadeDirection * fadeStep;
+
+    if (brightness >= maxBrightness) {
+      brightness = maxBrightness;
+      fadeDirection = -1;
+    }
+
+    if (brightness <= minBrightness) {
+      brightness = minBrightness;
+      fadeDirection = 1;
+    }
+
+    setLed(brightness);
+  }
 }
 
-void blinkLedOnce() {
-  Serial.println("LED KNIPPER");
-  ledOn();
-  delay(1000);
-  ledOff();
+void startScanLedEffect() {
+  Serial.println("SCAN LED EFFECT START");
+
+  ledMode = LED_SCAN_WAIT;
+  ledModeStartedAt = millis();
+  lastScanLedStep = millis();
+  scanFlashCount = 0;
+}
+
+void updateScanLedEffect() {
+  if (ledMode == LED_IDLE) {
+    return;
+  }
+
+  unsigned long now = millis();
+
+  if (ledMode == LED_SCAN_WAIT) {
+    setLed(40);
+
+    if (now - ledModeStartedAt >= scanWaitMs) {
+      ledMode = LED_SCAN_FLASH_ON;
+      ledModeStartedAt = now;
+      setLed(255);
+    }
+
+    return;
+  }
+
+  if (ledMode == LED_SCAN_FLASH_ON) {
+    if (now - ledModeStartedAt >= flashOnMs) {
+      ledMode = LED_SCAN_FLASH_OFF;
+      ledModeStartedAt = now;
+      setLed(30);
+    }
+
+    return;
+  }
+
+  if (ledMode == LED_SCAN_FLASH_OFF) {
+    if (now - ledModeStartedAt >= flashOffMs) {
+      scanFlashCount++;
+
+      if (scanFlashCount >= maxScanFlashes) {
+        ledMode = LED_SCAN_HOLD;
+        ledModeStartedAt = now;
+        setLed(255);
+      } else {
+        ledMode = LED_SCAN_FLASH_ON;
+        ledModeStartedAt = now;
+        setLed(255);
+      }
+    }
+
+    return;
+  }
+
+  if (ledMode == LED_SCAN_HOLD) {
+    setLed(255);
+
+    if (now - ledModeStartedAt >= scanHoldMs) {
+      ledMode = LED_SCAN_FADE_OUT;
+      ledModeStartedAt = now;
+      lastScanLedStep = now;
+    }
+
+    return;
+  }
+
+  if (ledMode == LED_SCAN_FADE_OUT) {
+    if (now - lastScanLedStep >= 8) {
+      lastScanLedStep = now;
+
+      brightness -= 8;
+
+      if (brightness <= 0) {
+        brightness = 0;
+        setLed(0);
+
+        ledMode = LED_IDLE;
+        fadeDirection = 1;
+        lastFadeTime = millis();
+
+        Serial.println("SCAN LED EFFECT END");
+      } else {
+        setLed(brightness);
+      }
+    }
+
+    return;
+  }
+}
+
+void fadeToBlocking(int target, int stepDelay) {
+  target = constrain(target, 0, 255);
+
+  if (brightness < target) {
+    for (int b = brightness; b <= target; b += 5) {
+      brightness = b;
+      setLed(brightness);
+      delay(stepDelay);
+    }
+  } else {
+    for (int b = brightness; b >= target; b -= 5) {
+      brightness = b;
+      setLed(brightness);
+      delay(stepDelay);
+    }
+  }
+
+  brightness = target;
+  setLed(brightness);
 }
 
 void startupLedTest() {
-  for (int i = 0; i < 3; i++) {
-    ledOn();
-    delay(200);
-    ledOff();
-    delay(200);
+  for (int i = 0; i < 2; i++) {
+    fadeToBlocking(255, 2);
+    delay(150);
+    fadeToBlocking(0, 2);
+    delay(150);
   }
+
+  brightness = 0;
+  fadeDirection = 1;
+  setLed(0);
 }
 
 // =======================
@@ -116,7 +287,14 @@ void connectToWifi() {
   int tries = 0;
 
   while (WiFi.status() != WL_CONNECTED && tries < 30) {
-    delay(500);
+    unsigned long waitStart = millis();
+
+    while (millis() - waitStart < 500) {
+      updateSmoothIdleLed();
+      updateScanLedEffect();
+      delay(5);
+    }
+
     Serial.print(".");
     tries++;
   }
@@ -146,7 +324,7 @@ bool sendEggScan(String eggId) {
   String body = "{\"eggId\":\"" + eggId + "\"}";
 
   Serial.println();
-  Serial.println("Scan verzenden naar backend...");
+  Serial.println("Scan DIRECT verzenden naar backend...");
   Serial.print("Egg ID: ");
   Serial.println(eggId);
   Serial.print("URL: http://");
@@ -154,8 +332,6 @@ bool sendEggScan(String eggId) {
   Serial.print(":");
   Serial.print(serverPort);
   Serial.println(path);
-  Serial.print("Body: ");
-  Serial.println(body);
 
   client.beginRequest();
   client.post(path);
@@ -170,7 +346,6 @@ bool sendEggScan(String eggId) {
 
   Serial.print("Status code: ");
   Serial.println(statusCode);
-
   Serial.print("Response: ");
   Serial.println(response);
 
@@ -195,14 +370,14 @@ void setup() {
   }
 
   pinMode(LED_PIN, OUTPUT);
-  ledOff();
+  setLed(0);
 
   Serial.println();
   Serial.println("==============================");
   Serial.println("Paaskonijn NFC Scanner gestart");
+  Serial.println("Fast scan mode + smooth LED op D6");
   Serial.println("==============================");
 
-  // Test: LED moet hier 3 keer knipperen bij opstart
   startupLedTest();
 
   SPI.begin();
@@ -221,6 +396,9 @@ void setup() {
 // =======================
 
 void loop() {
+  updateSmoothIdleLed();
+  updateScanLedEffect();
+
   if (millis() - lastWifiCheck > wifiCheckInterval) {
     lastWifiCheck = millis();
 
@@ -256,14 +434,13 @@ void loop() {
   lastUID = uid;
   lastScanTime = now;
 
-  // BELANGRIJK: LED brandt meteen na scan, dus niet wachten op backend
-  blinkLedOnce();
+  // LED effect start direct, maar blokkeert de scan niet meer.
+  startScanLedEffect();
 
-  // Daarna pas naar backend sturen
-  sendEggScan(uid);
-
+  // NFC netjes afsluiten voor we HTTP doen.
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 
-  delay(300);
+  // Scan wordt nu direct verzonden, niet pas na LED-effect.
+  sendEggScan(uid);
 }

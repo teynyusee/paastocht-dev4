@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import scriptData from "@/src/data/data.json";
 import VisualTextPlayer from "@/src/components/tracker/VisualTextPlayer";
-import { endGameAudio, resetGame } from "@/src/lib/api";
+import { endGame, resetGame } from "@/src/lib/api";
 import { socket } from "@/src/lib/socket";
 
 export default function EndPage() {
@@ -26,7 +26,7 @@ export default function EndPage() {
     if (hasStartedEndAudio.current) return;
     hasStartedEndAudio.current = true;
 
-    endGameAudio().catch((error) => {
+    endGame().catch((error) => {
       console.warn("End audio kon niet gestart worden:", error);
     });
   }, []);

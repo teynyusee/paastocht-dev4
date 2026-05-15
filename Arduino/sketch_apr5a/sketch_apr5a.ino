@@ -30,8 +30,8 @@ const char* password = "teynur233";
 // RASPBERRY PI BACKEND
 // =======================
 
-const char* serverAddress = "172.20.10.4";
-// const char* serverAddress = "paaskonijn.local";
+//const char* serverAddress = "172.20.10.4";
+const char* serverAddress = "paaskonijn.local";
 const int serverPort = 5001;
 
 WiFiClient wifi;

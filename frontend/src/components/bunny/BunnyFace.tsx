@@ -96,6 +96,9 @@ export default function BunnyFace() {
   const micFrameRef = useRef<number | null>(null);
   const loudFramesRef = useRef(0);
 
+  const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const sfxAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     sleepStateRef.current = sleepState;
   }, [sleepState]);
@@ -219,42 +222,102 @@ export default function BunnyFace() {
 
 
 
+type FaceAudioPayload = {
+  src: string;
+  text?: string;
+  mouthMs?: number;
+};
+
+type FaceSfxPayload = {
+  src: string;
+};
+
+const stopCurrentVoiceAudio = useCallback(() => {
+  if (voiceAudioRef.current) {
+    voiceAudioRef.current.pause();
+    voiceAudioRef.current.currentTime = 0;
+    voiceAudioRef.current = null;
+  }
+
+  setIsTalking(false);
+}, []);
+
 const playFaceAudio = useCallback(
   (payload: FaceAudioPayload) => {
-    stopCurrentAudio();
+    stopCurrentVoiceAudio();
 
     const audio = new Audio(payload.src);
-    audioRef.current = audio;
+    voiceAudioRef.current = audio;
 
     const shouldMoveMouth = Boolean(payload.mouthMs && payload.mouthMs > 0);
 
     if (shouldMoveMouth) {
       setIsTalking(true);
-
-      window.setTimeout(() => {
-        setIsTalking(false);
-      }, payload.mouthMs);
     } else {
       setIsTalking(false);
     }
 
+    audio.onended = () => {
+      if (voiceAudioRef.current === audio) {
+        setIsTalking(false);
+        voiceAudioRef.current = null;
+      }
+    };
+
     audio.play().catch((error) => {
-      console.warn("Face audio kon niet afspelen:", error);
+      console.warn("Face voice audio kon niet afspelen:", error);
       setIsTalking(false);
     });
+
+    if (shouldMoveMouth && payload.mouthMs) {
+      window.setTimeout(() => {
+        if (voiceAudioRef.current === audio) {
+          setIsTalking(false);
+        }
+      }, payload.mouthMs);
+    }
   },
-  [stopCurrentAudio],
+  [stopCurrentVoiceAudio],
 );
 
-  useEffect(() => {
-    socket.connect();
-    socket.on("face:audio", playFaceAudio);
+const playFaceSfx = useCallback((payload: FaceSfxPayload) => {
+  if (sfxAudioRef.current) {
+    sfxAudioRef.current.pause();
+    sfxAudioRef.current.currentTime = 0;
+    sfxAudioRef.current = null;
+  }
 
-    return () => {
-      socket.off("face:audio", playFaceAudio);
-      stopCurrentAudio();
-    };
-  }, [playFaceAudio, stopCurrentAudio]);
+  const audio = new Audio(payload.src);
+  sfxAudioRef.current = audio;
+
+  audio.onended = () => {
+    if (sfxAudioRef.current === audio) {
+      sfxAudioRef.current = null;
+    }
+  };
+
+  audio.play().catch((error) => {
+    console.warn("Face sfx audio kon niet afspelen:", error);
+  });
+}, []);
+
+useEffect(() => {
+  socket.on("face:audio", playFaceAudio);
+  socket.on("face:sfx", playFaceSfx);
+
+  return () => {
+    socket.off("face:audio", playFaceAudio);
+    socket.off("face:sfx", playFaceSfx);
+
+    stopCurrentVoiceAudio();
+
+    if (sfxAudioRef.current) {
+      sfxAudioRef.current.pause();
+      sfxAudioRef.current.currentTime = 0;
+      sfxAudioRef.current = null;
+    }
+  };
+}, [playFaceAudio, playFaceSfx, stopCurrentVoiceAudio]);
 
   useEffect(() => {
     resetGame().catch((error) => {

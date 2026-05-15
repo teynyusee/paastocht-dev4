@@ -20,14 +20,12 @@ export async function startGame() {
   return res.json();
 }
 
-export async function endGameAudio() {
-  const res = await fetch(`${API_URL}/api/end`, {
+export async function endGame() {
+  const response = await fetch(`${API_URL}/api/end`, {
     method: "POST",
   });
 
-  if (!res.ok) throw new Error("Failed to play end audio");
-
-  return res.json();
+  return response.json();
 }
 
 export async function resetGame() {

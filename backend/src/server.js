@@ -25,9 +25,16 @@ let gameState = {
   foundEggs: [],
 };
 
-// Eieren die al gescand zijn, maar nog wachten tot de whoosh klaar is.
-// Dit voorkomt dubbele scans tijdens de delay.
 const pendingEggs = new Set();
+
+// =======================
+// TIMERS / FLAGS
+// =======================
+
+const activeTimers = new Set();
+
+let lastEggSequenceActive = false;
+let endAudioAlreadyPlayed = false;
 
 // =======================
 // AUDIO SETTINGS
@@ -35,13 +42,21 @@ const pendingEggs = new Set();
 
 const scanEffectAudio = {
   src: "/audio/magical-spark.mp3",
-  text: "",
-  mouthMs: 0,
 };
 
-// magical-spark duurt ongeveer 2 seconden.
-// 2200ms zorgt dat hij volledig kan uitspelen.
-const scanEffectDelayMs = 2200;
+// Whoosh duurt ongeveer 2 seconden.
+// Wordt gebruikt zodat de end-page niet te vroeg springt.
+const scanEffectFullDurationMs = 2300;
+
+// Random scan voice start iets later dan de whoosh.
+// Lager = sneller. Hoger = meer afstand tussen whoosh en stem.
+const scanVoiceStartDelayMs = 650;
+
+const endAudio = {
+  src: "/audio/eindboodschap.mp3",
+  text: "Wauw! Het paasfeest is gered!",
+  mouthMs: 13000,
+};
 
 const scanAudios = [
   {
@@ -72,10 +87,30 @@ const scanAudios = [
 ];
 
 // =======================
+// TIMER HELPERS
+// =======================
+
+function scheduleTimer(callback, delayMs) {
+  const timer = setTimeout(() => {
+    activeTimers.delete(timer);
+    callback();
+  }, delayMs);
+
+  activeTimers.add(timer);
+  return timer;
+}
+
+function clearAllTimers() {
+  for (const timer of activeTimers) {
+    clearTimeout(timer);
+  }
+
+  activeTimers.clear();
+}
+
+// =======================
 // SHUFFLE BAG AUDIO
-// Hierdoor krijg je niet 3 keer hetzelfde geluid na elkaar.
-// Eerst worden alle scan-audio's 1 keer gebruikt in random volgorde.
-// Daarna begint een nieuwe random volgorde.
+// Hierdoor krijg je niet altijd dezelfde random scan-audio.
 // =======================
 
 let scanAudioBag = [];
@@ -101,17 +136,68 @@ function getNextScanVoiceAudio() {
   return scanAudioBag.pop();
 }
 
-function emitScanVoiceAudio() {
-  const audio = getNextScanVoiceAudio();
+// =======================
+// AUDIO EMITS
+// =======================
 
-  if (!audio) return;
+function emitScanSfxAudio() {
+  console.log("SFX whoosh playing:", scanEffectAudio.src);
 
+  // Apart kanaal: beweegt mond niet en stopt voice niet.
+  io.emit("face:sfx", scanEffectAudio);
+}
+
+function emitScanVoiceAudio(audio) {
+  if (!audio) return null;
+
+  console.log("Scan voice playing:", audio.src);
+
+  // Voice kanaal: beweegt mond wel.
   io.emit("face:audio", audio);
+
+  return audio;
+}
+
+function emitEndAudio() {
+  if (endAudioAlreadyPlayed) {
+    return;
+  }
+
+  endAudioAlreadyPlayed = true;
+  lastEggSequenceActive = false;
+
+  gameState = {
+    ...gameState,
+    phase: "end",
+  };
+
+  console.log("End audio playing:", endAudio.src);
+
+  io.emit("game:update", gameState);
+  io.emit("face:audio", endAudio);
+}
+
+// =======================
+// END PAGE ROUTING
+// =======================
+
+function tellTrackerToGoEnd() {
+  lastEggSequenceActive = false;
+
+  gameState = {
+    ...gameState,
+    phase: "readyToEnd",
+  };
+
+  console.log("Tracker may now go to end page");
+
+  io.emit("game:update", gameState);
+  io.emit("tracker:go-end");
 }
 
 // =======================
 // SHARED SCAN LOGIC
-// Deze functie wordt gebruikt door:
+// Wordt gebruikt door:
 // - echte Arduino scan via POST /api/scan
 // - testknop via socket test:egg-found
 // =======================
@@ -122,7 +208,7 @@ function handleEggScan(eggId) {
       ok: false,
       error: "Invalid eggId",
       isNewEgg: false,
-      queued: false,
+      isLastEgg: false,
       state: gameState,
     };
   }
@@ -136,7 +222,7 @@ function handleEggScan(eggId) {
     return {
       ok: true,
       isNewEgg: false,
-      queued: false,
+      isLastEgg: false,
       state: gameState,
     };
   }
@@ -145,36 +231,71 @@ function handleEggScan(eggId) {
     return {
       ok: true,
       isNewEgg: false,
-      queued: false,
+      isLastEgg: true,
       state: gameState,
     };
   }
 
   pendingEggs.add(eggId);
 
-  // 1. Ei meteen toevoegen
+  // 1. Ei meteen registreren
   gameState = {
     ...gameState,
     phase: "game",
     foundEggs: [...gameState.foundEggs, eggId],
   };
 
-  // 2. Tracker/iPad meteen updaten, dus ei verschijnt direct
+  const isLastEgg = gameState.foundEggs.length >= gameState.totalEggs;
+
+  if (isLastEgg) {
+    lastEggSequenceActive = true;
+  }
+
+  console.log("Egg registered:", eggId);
+  console.log("Egg count:", gameState.foundEggs.length, "/", gameState.totalEggs);
+  console.log("Is last egg:", isLastEgg);
+
+  // 2. Tracker meteen updaten, ei verschijnt direct
   io.emit("game:update", gameState);
 
-  // 3. Whoosh speelt tegelijk met het verschijnen van het ei
-  io.emit("face:audio", scanEffectAudio);
+  // 3. Whoosh meteen starten
+  emitScanSfxAudio();
 
-  // 4. Na de volledige whoosh pas random stemgeluid
-  setTimeout(() => {
+  // 4. Random scan voice al kiezen, maar iets later afspelen
+  const scanVoiceAudio = getNextScanVoiceAudio();
+
+  scheduleTimer(() => {
+    emitScanVoiceAudio(scanVoiceAudio);
+  }, scanVoiceStartDelayMs);
+
+  // 5. Pending verwijderen na korte tijd
+  scheduleTimer(() => {
     pendingEggs.delete(eggId);
-    emitScanVoiceAudio();
-  }, scanEffectDelayMs);
+  }, 800);
+
+  // 6. Laatste ei:
+  // wachten tot whoosh én scan voice klaar zijn,
+  // daarna pas naar /tracker/end.
+  if (isLastEgg) {
+    const scanVoiceDurationMs = scanVoiceAudio?.mouthMs ?? 2500;
+
+    const waitBeforeEndPageMs =
+      Math.max(
+        scanEffectFullDurationMs,
+        scanVoiceStartDelayMs + scanVoiceDurationMs,
+      ) + 300;
+
+    console.log("Laatste ei. End pagina in:", waitBeforeEndPageMs, "ms");
+
+    scheduleTimer(() => {
+      tellTrackerToGoEnd();
+    }, waitBeforeEndPageMs);
+  }
 
   return {
     ok: true,
     isNewEgg: true,
-    queued: true,
+    isLastEgg,
     state: gameState,
   };
 }
@@ -188,6 +309,8 @@ app.get("/api/state", (req, res) => {
 });
 
 app.post("/api/start", (req, res) => {
+  clearAllTimers();
+
   gameState = {
     phase: "intro",
     totalEggs: 4,
@@ -196,6 +319,8 @@ app.post("/api/start", (req, res) => {
 
   pendingEggs.clear();
   scanAudioBag = [];
+  lastEggSequenceActive = false;
+  endAudioAlreadyPlayed = false;
 
   io.emit("game:update", gameState);
   io.emit("tracker:start");
@@ -226,24 +351,25 @@ app.post("/api/scan", (req, res) => {
   res.json({
     ok: true,
     isNewEgg: result.isNewEgg,
-    queued: result.queued,
+    isLastEgg: result.isLastEgg,
     state: result.state,
   });
 });
 
 app.post("/api/end", (req, res) => {
-  gameState = {
-    ...gameState,
-    phase: "end",
-  };
+  // Deze endpoint mag alleen door de end pagina getriggerd worden.
+  // Als hij te vroeg wordt aangeroepen, speelt hij nog niets.
+  if (lastEggSequenceActive) {
+    console.log("End requested too early. Waiting for last scan sequence.");
 
-  io.emit("game:update", gameState);
+    return res.json({
+      ok: true,
+      waitingForLastScanSequence: true,
+      state: gameState,
+    });
+  }
 
-  io.emit("face:audio", {
-    src: "/audio/eindboodschap.mp3",
-    text: "Wauw! Het paasfeest is gered!",
-    mouthMs: 13000,
-  });
+  emitEndAudio();
 
   res.json({
     ok: true,
@@ -252,6 +378,8 @@ app.post("/api/end", (req, res) => {
 });
 
 app.post("/api/reset", (req, res) => {
+  clearAllTimers();
+
   gameState = {
     phase: "idle",
     totalEggs: 4,
@@ -260,6 +388,8 @@ app.post("/api/reset", (req, res) => {
 
   pendingEggs.clear();
   scanAudioBag = [];
+  lastEggSequenceActive = false;
+  endAudioAlreadyPlayed = false;
 
   io.emit("game:update", gameState);
   io.emit("face:idle");
@@ -277,9 +407,6 @@ io.on("connection", (socket) => {
 
   socket.emit("game:update", gameState);
 
-  // Testknop op tracker.
-  // Werkt exact zoals een echte Arduino scan:
-  // whoosh -> wachten -> ei toevoegen -> tracker update -> random stem
   socket.on("test:egg-found", () => {
     if (gameState.foundEggs.length >= gameState.totalEggs) {
       console.log("Test egg ignored: max eggs already found");

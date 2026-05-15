@@ -42,26 +42,17 @@
   font-weight: 700;
   line-height: 1.18;
 
-  font-size: clamp(2.2rem, 6vw, 5.8rem);
+  font-size: clamp(5rem, 10vw, 7rem);
 
-  /* Zorgt dat tekst nooit buiten scherm schiet */
   text-wrap: balance;
   overflow-wrap: break-word;
-
-  /* Kleine zachte achtergrond zodat tekst leesbaar blijft */
-  padding: clamp(1rem, 2vw, 2rem);
-  border-radius: 2rem;
-  background: rgba(255, 245, 255, 0.45);
-  backdrop-filter: blur(2px);
 }
 
-/* Kind icoon linksboven */
 .kid {
-  width: clamp(5rem, 12vw, 9rem);
-  height: auto;
+  width: clamp(7rem, 16vw, 13rem);
 
   position: absolute;
-  top: clamp(0.5rem, 4vw, 3rem);
+  top: clamp(0.6rem, 6vw, 6rem);
   left: clamp(0.5rem, 5vw, 5rem);
 
   rotate: -7deg;
@@ -174,7 +165,6 @@
   }
 }
 
-/* Als scherm heel laag is, tekst kleiner maken */
 @media (max-height: 650px) {
   .start-page__panel {
     min-height: 90vh;
